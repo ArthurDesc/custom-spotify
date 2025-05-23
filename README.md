@@ -1,74 +1,240 @@
-# boilerplate Monorepo
+# Custom Spotify - Monorepo Boilerplate
 
-Ce projet est un monorepo géré avec pnpm workspaces et Turborepo.
+Un boilerplate moderne pour applications web et mobile avec Next.js, React Native, Prisma et NextAuth.
 
-Le nom de la base de donnée est cineverse, il peut être changé
+## 🚀 Technologies
 
-## Commandes utiles
+- **Frontend Web**: Next.js 15, React 18, TailwindCSS
+- **Mobile**: React Native avec Expo
+- **Base de données**: PostgreSQL avec Prisma ORM
+- **Authentification**: NextAuth.js
+- **Monorepo**: Turborepo avec pnpm
+- **TypeScript**: Support complet
 
-### 1. Installation des dépendances
+## 📋 Prérequis
 
-Pour installer toutes les dépendances du projet, exécutez la commande suivante à la racine du monorepo :
+- Node.js 18+ 
+- pnpm 8+
+- PostgreSQL (via Laragon ou installation locale)
+- Git
 
+## 🛠️ Installation
+
+### 1. Cloner le projet
+```bash
+git clone <votre-repo>
+cd custom-spotify
+```
+
+### 2. Installer les dépendances
 ```bash
 pnpm install
 ```
 
-### 2. Lancer le serveur de développement (Application Web)
+### 3. Configuration de l'environnement
 
-Pour démarrer le serveur de développement pour l'application web (et potentiellement d'autres applications configurées dans `turbo.json`), exécutez :
+Copiez le fichier `.env.example` vers `.env` et configurez vos variables :
 
+```bash
+cp .env.example .env
+```
+
+**Variables importantes à configurer :**
+
+```env
+# Base de données PostgreSQL
+DATABASE_URL="postgresql://postgres:@localhost:5432/custom_spotify_db?schema=public"
+
+# NextAuth.js (déjà configuré avec un secret sécurisé)
+NEXTAUTH_SECRET="0R+Sma0TfG1S+dyOGQMvxqix7tDjDAN0mg6cPPVe9zw="
+NEXTAUTH_URL="http://localhost:3000"
+
+# Email (optionnel pour l'authentification par email)
+EMAIL_SERVER="smtp://username:password@smtp.example.com:587"
+EMAIL_FROM="noreply@example.com"
+```
+
+### 4. Configuration de PostgreSQL avec Laragon
+
+1. Ouvrez Laragon
+2. Démarrez PostgreSQL depuis le menu
+3. La base de données sera créée automatiquement lors de la première migration
+
+### 5. Configuration de la base de données
+
+```bash
+# Générer le client Prisma
+pnpm run db:generate
+
+# Créer et synchroniser la base de données
+npx prisma db push
+
+# (Optionnel) Lancer Prisma Studio pour visualiser les données
+npx prisma studio
+```
+
+## 🚀 Démarrage
+
+### Développement complet (tous les services)
 ```bash
 pnpm dev
 ```
 
-Cette commande utilise Turborepo pour lancer les scripts `dev` définis dans les `package.json` des différents workspaces (par exemple, `apps/web`).
+### Applications individuelles
 
-### 3. Lancer Prisma Studio
-
-Prisma Studio est un outil visuel pour gérer votre base de données. Pour le lancer, assurez-vous que vos variables d'environnement de base de données sont correctement configurées (généralement dans un fichier `.env` à la racine ou dans `packages/db`).
-
-Exécutez la commande suivante à la racine du monorepo :
-
+**Web (Next.js)**
 ```bash
-pnpm prisma studio
+cd apps/web
+pnpm dev
 ```
 
-Alternativement, si vous souhaitez cibler spécifiquement le package de base de données :
-
+**Mobile (React Native)**
 ```bash
-pnpm --filter @cineverse/db exec prisma studio
+cd apps/mobile
+pnpm dev
 ```
 
-### 4. Autres commandes Turborepo
+## 📁 Structure du projet
 
-Le `package.json` à la racine définit d'autres scripts utiles orchestrés par Turborepo :
+```
+custom-spotify/
+├── apps/
+│   ├── web/                 # Application Next.js
+│   └── mobile/              # Application React Native
+├── packages/
+│   ├── db/                  # Configuration Prisma
+│   ├── ui/                  # Composants UI partagés
+│   ├── types/               # Types TypeScript partagés
+│   └── utils/               # Utilitaires partagés
+├── prisma/
+│   ├── schema.prisma        # Schéma de base de données
+│   └── migrations/          # Migrations
+└── .env                     # Variables d'environnement
+```
 
-- **Build le projet :**
-  ```bash
-  pnpm build
-  ```
-- **Lancer les tests :**
-  ```bash
-  pnpm test
-  ```
-- **Linter le code :**
-  ```bash
-  pnpm lint
-  ```
-- **Formatter le code :**
-  ```bash
-  pnpm format
-  ```
-- **Nettoyer les artefacts de build :**
-  ```bash
-  pnpm clean
-  ```
+## 🗄️ Base de données
 
-Consultez le fichier `turbo.json` et les `package.json` des workspaces individuels pour plus de détails sur la configuration des tâches.
+### Commandes utiles
 
-### 5. Commandes pour le mobile
-- **Lancdr le serveur mobile :**
-  ```bash
-    cd apps/mobile && npx expo start
-  ```
+```bash
+# Générer le client Prisma
+pnpm run db:generate
+
+# Appliquer les changements de schéma
+npx prisma db push
+
+# Créer une migration
+npx prisma migrate dev
+
+# Réinitialiser la base de données
+npx prisma migrate reset
+
+# Ouvrir Prisma Studio
+npx prisma studio
+
+# Seeder la base de données
+pnpm run db:seed
+```
+
+### Modèles disponibles
+
+- **User** : Utilisateurs de l'application
+- **Account** : Comptes liés (OAuth)
+- **Session** : Sessions utilisateur
+- **VerificationToken** : Tokens de vérification
+- **Test** : Modèle de test
+
+## 🔐 Authentification
+
+Le projet utilise NextAuth.js avec support pour :
+
+- **Email Magic Link** : Connexion par lien email
+- **Credentials** : Connexion par email/mot de passe
+- **OAuth** : Prêt pour Google, GitHub, etc.
+
+### Pages d'authentification
+
+- `/auth/signin` : Page de connexion
+- `/auth/register` : Page d'inscription
+- `/auth/verify-request` : Vérification email
+
+## 🧪 Tests et Qualité
+
+```bash
+# Linter
+pnpm lint
+
+# Tests
+pnpm test
+
+# Formatage du code
+pnpm format
+
+# Build de production
+pnpm build
+```
+
+## 📱 Mobile (React Native)
+
+L'application mobile utilise Expo pour un développement simplifié :
+
+```bash
+cd apps/mobile
+pnpm dev
+```
+
+## 🚀 Déploiement
+
+### Web (Vercel recommandé)
+
+1. Connectez votre repo à Vercel
+2. Configurez les variables d'environnement
+3. Déployez automatiquement
+
+### Base de données (Production)
+
+Configurez `DATABASE_URL` avec votre base PostgreSQL de production (Supabase, Railway, etc.)
+
+## 🔧 Dépannage
+
+### Problèmes courants
+
+**Erreur de connexion à la base de données :**
+- Vérifiez que PostgreSQL est démarré dans Laragon
+- Vérifiez l'URL de connexion dans `.env`
+- Assurez-vous que la base de données existe
+
+**Erreur NextAuth JWT :**
+- Vérifiez que `NEXTAUTH_SECRET` est défini
+- Régénérez un nouveau secret si nécessaire
+
+**Erreur Prisma Client :**
+```bash
+pnpm run db:generate
+```
+
+### Logs et debugging
+
+- Prisma Studio : `npx prisma studio`
+- Logs Next.js : Consultez la console du navigateur
+- Logs serveur : Terminal où vous avez lancé `pnpm dev`
+
+## 📚 Documentation
+
+- [Next.js](https://nextjs.org/docs)
+- [Prisma](https://www.prisma.io/docs)
+- [NextAuth.js](https://next-auth.js.org)
+- [React Native](https://reactnative.dev/docs/getting-started)
+- [Turborepo](https://turbo.build/repo/docs)
+
+## 🤝 Contribution
+
+1. Fork le projet
+2. Créez une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrez une Pull Request
+
+## 📄 Licence
+
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.

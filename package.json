@@ -10,7 +10,13 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "clean": "turbo run clean && rimraf .turbo",
-    "seed": "cd packages/db && pnpm exec ts-node ../../prisma/seed.ts"
+    "seed": "cd packages/db && pnpm exec ts-node ../../prisma/seed.ts",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -30,6 +36,7 @@
     }
   },
   "dependencies": {
+    "@prisma/client": "6.8.2",
     "@types/bcryptjs": "^3.0.0",
     "bcryptjs": "^3.0.2"
   }
