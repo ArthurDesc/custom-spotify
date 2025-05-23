@@ -1,0 +1,24 @@
+{
+  "name": "@cineverse/db",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "lint": "eslint . --ext .ts,.tsx",
+    "build": "tsc -p tsconfig.json && copyfiles -u 1 \"generated/**/*\" \"dist/generated\"",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@prisma/client": "6.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "eslint": "^9.0.0",
+    "prisma": "6.8.2",
+    "typescript": "^5.0.0"
+  },
+  "prisma": {
+    "seed": "ts-node ../../prisma/seed.ts"
+  }
+}
