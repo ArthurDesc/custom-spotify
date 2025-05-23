@@ -31,6 +31,7 @@ export default function RegisterForm() {
     }
 
     try {
+      console.log('🔍 Début inscription...');
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -44,6 +45,7 @@ export default function RegisterForm() {
       });
 
       const data = await res.json();
+      console.log('📝 Réponse inscription:', data);
 
       if (!res.ok) {
         throw new Error(data.message || "Une erreur est survenue lors de l'inscription");
@@ -51,19 +53,42 @@ export default function RegisterForm() {
 
       // Registration successful
       setMessage({ type: "success", text: "Inscription réussie ! Connexion en cours..." });
+      console.log('✅ Inscription réussie, tentative de connexion...');
+
+      // Wait a bit to ensure the user is properly created
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Automatically sign in the user after successful registration
+      console.log('🔐 Tentative de connexion avec:', formData.email);
       const signInResult = await signIn("credentials", {
         email: formData.email,
         password: formData.password,
-        redirect: true,
+        redirect: false, // Ne pas rediriger automatiquement pour voir l'erreur
         callbackUrl: "/",
       });
 
+      console.log('📊 Résultat connexion:', signInResult);
+
       if (signInResult?.error) {
-        setMessage({ type: "error", text: "Erreur lors de la connexion automatique" });
+        console.error('❌ Erreur connexion:', signInResult.error);
+        setMessage({ 
+          type: "error", 
+          text: `Inscription réussie mais erreur de connexion: ${signInResult.error}. Veuillez vous connecter manuellement.` 
+        });
+      } else if (signInResult?.ok) {
+        console.log('✅ Connexion réussie !');
+        setMessage({ type: "success", text: "Inscription et connexion réussies ! Redirection..." });
+        // Redirection manuelle après succès
+        window.location.href = "/";
+      } else {
+        console.log('⚠️ Résultat de connexion inattendu');
+        setMessage({ 
+          type: "error", 
+          text: "Inscription réussie mais problème de connexion. Veuillez vous connecter manuellement." 
+        });
       }
     } catch (error) {
+      console.error('❌ Erreur inscription:', error);
       setMessage({
         type: "error",
         text: error instanceof Error ? error.message : "Une erreur est survenue",
