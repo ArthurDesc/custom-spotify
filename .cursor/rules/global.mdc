@@ -13,7 +13,10 @@ alwaysApply: true
     • `utils` (fonctions utilitaires)  
   - Un workspace `apps/` avec deux sous-dossiers : `web/` et `mobile/`  
   - CI/CD via GitHub Actions, caching TurboRepo activé  
-  - Versioning sémantique avec Changesets  
+  - Versioning sémantique avec Changesets 
+
+  - il n'est pas nécessaire de mettre en place beaucoup de sécurité étant donné que l'application utilisé seulement par moi
+ - quand tu mets en place une fonctionnalité je veux que tu ajoutes des logs détaillés pour pouvoir comprendre l'erreur si jamais il y en a une.
 
 
 

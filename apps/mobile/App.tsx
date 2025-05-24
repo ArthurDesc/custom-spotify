@@ -1,9 +1,14 @@
 import React, { useState } from "react";
-import { View, Alert, StyleSheet, TouchableOpacity, Text } from "react-native";
+import { View, Alert, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { TextInput } from "react-native";
 import { API_CONFIG } from "./config";
 import { SpotifyTest } from "./components/SpotifyTest";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { LoginForm } from "./components/LoginForm";
+import { UserProfile } from "./components/UserProfile";
+import { SpotifyLoginButton } from "./components/SpotifyLoginButton";
+import SpotifyProfile from "./components/SpotifyProfile";
 
 function RegisterForm({ onBack }: { onBack: () => void }) {
   const [name, setName] = React.useState("");
@@ -37,7 +42,7 @@ function RegisterForm({ onBack }: { onBack: () => void }) {
       const data = await res.json();
       
       if (res.ok) {
-        Alert.alert("Succès", "Inscription réussie !");
+        Alert.alert("Succès", "Inscription réussie ! Vous pouvez maintenant vous connecter.");
         onBack();
       } else {
         Alert.alert("Erreur", data.message || "Erreur lors de l'inscription");
@@ -95,10 +100,64 @@ function RegisterForm({ onBack }: { onBack: () => void }) {
   );
 }
 
-export default function App() {
+function AppContent() {
   const [showRegister, setShowRegister] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSpotifyLogin, setShowSpotifyLogin] = useState(false);
   const [showSpotifyTest, setShowSpotifyTest] = useState(false);
+  const [showSpotifyProfile, setShowSpotifyProfile] = useState(false);
+  const { user, loading, logout } = useAuth();
   
+  // Affichage du loader pendant le chargement de la session
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1db954" />
+        <Text style={styles.loadingText}>Chargement...</Text>
+      </View>
+    );
+  }
+  
+  // Si l'utilisateur est connecté, afficher le profil et les options
+  if (user) {
+    if (showSpotifyTest) {
+      return <SpotifyTest onBack={() => setShowSpotifyTest(false)} />;
+    }
+    
+    if (showSpotifyProfile) {
+      return <SpotifyProfile onLogout={() => {
+        logout();
+        setShowSpotifyProfile(false);
+      }} />;
+    }
+    
+    return (
+      <View style={styles.container}>
+        <Text style={styles.appTitle}>🎵 Custom Spotify</Text>
+        <Text style={styles.subtitle}>Bienvenue dans votre espace personnel</Text>
+        
+        <UserProfile />
+        
+        <TouchableOpacity
+          style={[styles.button, styles.spotifyButton]}
+          onPress={() => setShowSpotifyProfile(true)}
+        >
+          <Text style={[styles.text, styles.spotifyText]}>🎵 Mon Profil Spotify</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.button, styles.testButton]}
+          onPress={() => setShowSpotifyTest(true)}
+        >
+          <Text style={[styles.text, styles.testText]}>🧪 Test Spotify API</Text>
+        </TouchableOpacity>
+        
+        <StatusBar style="auto" />
+      </View>
+    );
+  }
+  
+  // Si l'utilisateur n'est pas connecté, afficher les options de connexion/inscription
   if (showSpotifyTest) {
     return <SpotifyTest onBack={() => setShowSpotifyTest(false)} />;
   }
@@ -107,10 +166,28 @@ export default function App() {
     <View style={styles.container}>
       {showRegister ? (
         <RegisterForm onBack={() => setShowRegister(false)} />
+      ) : showLogin ? (
+        <LoginForm onBack={() => setShowLogin(false)} />
+      ) : showSpotifyLogin ? (
+        <SpotifyLoginButton onBack={() => setShowSpotifyLogin(false)} />
       ) : (
         <>
           <Text style={styles.appTitle}>🎵 Custom Spotify</Text>
           <Text style={styles.subtitle}>Application de test</Text>
+          
+          <TouchableOpacity
+            style={[styles.button, styles.spotifyButton]}
+            onPress={() => setShowSpotifyLogin(true)}
+          >
+            <Text style={[styles.text, styles.spotifyText]}>🎵 Connexion Spotify</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.button, styles.loginButton]}
+            onPress={() => setShowLogin(true)}
+          >
+            <Text style={[styles.text, styles.loginText]}>🔑 Connexion Email</Text>
+          </TouchableOpacity>
           
           <TouchableOpacity
             style={styles.button}
@@ -120,15 +197,23 @@ export default function App() {
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.button, styles.spotifyButton]}
+            style={[styles.button, styles.testButton]}
             onPress={() => setShowSpotifyTest(true)}
           >
-            <Text style={[styles.text, styles.spotifyText]}>🎵 Test Spotify API</Text>
+            <Text style={[styles.text, styles.testText]}>🧪 Test Spotify API</Text>
           </TouchableOpacity>
         </>
       )}
       <StatusBar style="auto" />
     </View>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
@@ -138,6 +223,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#64748b",
   },
   appTitle: {
     fontSize: 28,
@@ -157,11 +253,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#fee2e2",
     borderRadius: 8,
     alignItems: "center",
-    margin: 16,
+    margin: 8,
     minWidth: 200,
+  },
+  loginButton: {
+    backgroundColor: "#dbeafe",
   },
   spotifyButton: {
     backgroundColor: "#dcfce7",
+  },
+  testButton: {
+    backgroundColor: "#f3e8ff",
   },
   buttonDisabled: {
     backgroundColor: "#f3f4f6",
@@ -171,8 +273,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 18,
   },
+  loginText: {
+    color: "#1d4ed8",
+  },
   spotifyText: {
     color: "#16a34a",
+  },
+  testText: {
+    color: "#7c3aed",
   },
   formContainer: {
     width: 300,

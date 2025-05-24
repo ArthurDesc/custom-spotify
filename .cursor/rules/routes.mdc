@@ -1,0 +1,6 @@
+---
+description: Quand tu mets en place une nouvelle route API 
+globs: 
+alwaysApply: false
+---
+Quand tu mets en place une nouvelle route API une fois que sa mise en place est finie avant de confirmer que ces fonctionnels il faut que tu t'assures que ça marche en testant la route en question avec le bon format curl.

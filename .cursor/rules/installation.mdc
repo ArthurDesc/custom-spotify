@@ -1,0 +1,6 @@
+---
+description: Quand tu installes une nouvelle dépendance
+globs: 
+alwaysApply: false
+---
+Quand tu installes une nouvelle dépendance il faut que tu te serves du serveur MCP pour voir les versions disponibles de dépendance en question et il faut aussi que tu vérifies les packages pour voir ce que j'ai déjà comme dépendance et avec quelle version de sorte installer un environnement cohérent.

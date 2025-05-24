@@ -3,13 +3,16 @@ const isDev = __DEV__;
 export const API_CONFIG = {
   // Pour le développement avec Expo Go, utilisez l'URL du tunnel ou votre IP locale
   BASE_URL: isDev 
-    ? 'http://10.10.31.140:3000' // Votre IP locale actuelle
+    ? 'http://192.168.1.148:3000' // IP locale pour le développement mobile
     : 'https://votre-domaine-production.com',
   
   ENDPOINTS: {
     REGISTER: '/api/auth/register',
     LOGIN: '/api/auth/login',
     SPOTIFY_TEST: '/api/spotify/test',
+    SPOTIFY_SIGNIN: '/api/auth/signin/spotify',
+    SPOTIFY_SESSION: '/api/auth/session',
+    MOBILE_CALLBACK: '/api/auth/mobile-callback',
   }
 };
 

@@ -1,74 +1,47 @@
 import { AuthOptions, User as NextAuthUser } from "next-auth";
-import EmailProvider from "next-auth/providers/email";
-import CredentialsProvider from "next-auth/providers/credentials";
+import SpotifyProvider from "next-auth/providers/spotify";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { PrismaClient } from "@cineverse/db/generated/client";
-import type { User as PrismaUserType } from "@cineverse/db/generated/client";
-import bcrypt from 'bcryptjs';
-import { JWT } from "next-auth/jwt";
 
 // Créer une instance Prisma locale
 const prisma = new PrismaClient({
   log: ['error'],
 });
 
-// Define a type for our user object that includes id
-interface UserWithId extends NextAuthUser {
-  id: string;
+// Fonction pour obtenir l'URL de base
+function getBaseUrl() {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  if (process.env.NEXTAUTH_URL) {
+    return process.env.NEXTAUTH_URL;
+  }
+  return 'http://localhost:3000';
 }
 
 export const authOptions: AuthOptions = {
-  // Retirer l'adaptateur Prisma pour éviter les conflits avec JWT + Credentials
-  // adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma),
   providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials): Promise<UserWithId | null> {
-        console.log('🔍 NextAuth Credentials - Début autorisation');
-        
-        if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Credentials manquantes');
-          return null;
+    SpotifyProvider({
+      clientId: process.env.SPOTIFY_CLIENT_ID!,
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          scope: [
+            "user-read-email",
+            "user-read-private", 
+            "user-read-playback-state",
+            "user-modify-playback-state",
+            "user-read-currently-playing",
+            "user-library-read",
+            "user-library-modify",
+            "playlist-read-private",
+            "playlist-modify-public", 
+            "playlist-modify-private",
+            "user-top-read",
+            "user-read-recently-played"
+          ].join(" ")
         }
-
-        console.log('🔍 Recherche utilisateur:', credentials.email);
-        const userFromDb = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!userFromDb) {
-          console.log('❌ Utilisateur non trouvé');
-          return null;
-        }
-        
-        console.log('✅ Utilisateur trouvé:', userFromDb.id);
-        
-        // Assert the type for hashedPassword and image if TypeScript is not inferring them
-        const user = userFromDb as PrismaUserType;
-
-        if (!user.hashedPassword) { // Check for existence of hashedPassword
-          console.log('❌ Pas de mot de passe hashé');
-          return null;
-        }
-
-        console.log('🔐 Vérification mot de passe...');
-        const isValidPassword = await bcrypt.compare(credentials.password, user.hashedPassword as string);
-
-        if (!isValidPassword) {
-          console.log('❌ Mot de passe incorrect');
-          return null;
-        }
-
-        console.log('✅ Authentification réussie');
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image as string | null,
-        };
       }
     })
   ],
@@ -77,28 +50,49 @@ export const authOptions: AuthOptions = {
     verifyRequest: "/auth/verify-request",
   },
   session: {
-    strategy: "jwt",
+    strategy: "database",
     maxAge: 30 * 24 * 60 * 60, // 30 jours
   },
   callbacks: {
-    async jwt({ token, user }) {
-      // The user object passed here is the one returned by the authorize callback
-      if (user) {
-        token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.picture = user.image;
+    async jwt({ token, account }) {
+      // Sauvegarder les tokens Spotify
+      if (account && account.provider === "spotify") {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.expiresAt = account.expires_at;
       }
+      
       return token;
     },
-    async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
-        session.user.image = token.picture as string;
+    async session({ session, token, user }) {
+      // Ajouter l'ID utilisateur à la session
+      if (user) {
+        session.user.id = user.id;
       }
+      
+      // Ajouter les tokens Spotify à la session si disponibles
+      if (token?.accessToken) {
+        session.accessToken = token.accessToken as string;
+        session.refreshToken = token.refreshToken as string;
+        session.expiresAt = token.expiresAt as number;
+      }
+      
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Utiliser l'URL de base dynamique
+      const dynamicBaseUrl = getBaseUrl();
+      
+      // Gérer la redirection pour l'app mobile
+      if (url.includes('/api/auth/mobile-callback')) {
+        // Rediriger vers notre endpoint mobile après que NextAuth ait créé la session
+        return `${dynamicBaseUrl}/api/auth/mobile-callback`;
+      }
+      
+      // Redirection par défaut
+      if (url.startsWith("/")) return `${dynamicBaseUrl}${url}`;
+      if (new URL(url).origin === dynamicBaseUrl) return url;
+      return dynamicBaseUrl;
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
