@@ -171,7 +171,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\laragon\\www\\cineverse\\packages\\db\\generated\\client",
+      "value": "C:\\laragon\\www\\custom-spotify\\packages\\db\\generated\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -185,7 +185,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\laragon\\www\\cineverse\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\laragon\\www\\custom-spotify\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -199,7 +199,6 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
