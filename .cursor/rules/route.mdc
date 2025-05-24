@@ -1,0 +1,6 @@
+---
+description: Quand tu modifies une route bien que tu en mets une nouvelle en place
+globs: 
+alwaysApply: false
+---
+- quand tu mets en place une route ou bien que tu en modifies une tu dois toujours tester l'endpoint avec la commande curl

@@ -1,203 +1,419 @@
-import React, { useState } from "react";
-import { View, Alert, StyleSheet, TouchableOpacity, Text } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { TextInput } from "react-native";
-import { API_CONFIG } from "./config";
-import { SpotifyTest } from "./components/SpotifyTest";
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 
-function RegisterForm({ onBack }: { onBack: () => void }) {
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
+WebBrowser.maybeCompleteAuthSession();
 
-  const handleRegister = async () => {
-    if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Erreur", "Veuillez remplir tous les champs");
-      return;
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const SPOTIFY_CLIENT_ID = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
+
+console.log('🔍 API_URL utilisée:', API_URL);
+
+interface SpotifyProfile {
+  id: string;
+  display_name: string;
+  email: string;
+  images: Array<{ url: string }>;
+  followers: { total: number };
+  country: string;
+}
+
+interface Playlist {
+  id: string;
+  name: string;
+  description: string;
+  images: Array<{ url: string }>;
+  tracks: { total: number };
+}
+
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [profile, setProfile] = useState<SpotifyProfile | null>(null);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  const discovery = {
+    authorizationEndpoint: 'https://accounts.spotify.com/authorize',
+    tokenEndpoint: 'https://accounts.spotify.com/api/token',
+  };
+
+  // Générer l'URL de redirection
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: 'custom-spotify',
+    path: 'auth'
+  });
+
+  // Debug: Afficher l'URL de redirection
+  console.log('🔍 URL de redirection générée:', redirectUri);
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: SPOTIFY_CLIENT_ID!,
+      scopes: [
+        'user-read-email',
+        'user-read-private',
+        'playlist-read-private',
+        'user-read-playback-state',
+        'user-modify-playback-state',
+        'user-read-currently-playing',
+        'user-library-read',
+        'user-top-read',
+        'user-read-recently-played'
+      ],
+      usePKCE: false,
+      redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+    },
+    discovery
+  );
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+      handleAuthSuccess(code);
+    } else if (response?.type === 'error') {
+      console.error('Auth error:', response.error);
+      Alert.alert('Erreur d\'authentification', response.error?.message || 'Erreur inconnue');
     }
+  }, [response]);
 
-    setLoading(true);
+  const handleAuthSuccess = async (code: string) => {
     try {
-      // Utilisation de la configuration d'API au lieu de l'URL hardcodée
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || API_CONFIG.BASE_URL;
-      const url = `${apiUrl}${API_CONFIG.ENDPOINTS.REGISTER}`;
+      setLoading(true);
       
-      console.log("Tentative de connexion à:", url); // Pour débugger
+      console.log('🔍 Code reçu:', code);
+      console.log('🔍 Redirect URI utilisée:', redirectUri);
       
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
+      // Échanger le code contre un token via notre API backend (endpoint public)
+      const tokenResponse = await fetch(`${API_URL}/api/spotify-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+        body: JSON.stringify({ 
+          code,
+          redirectUri
+        }),
       });
       
-      const data = await res.json();
+      console.log('🔍 Response status:', tokenResponse.status);
+      const responseText = await tokenResponse.text();
+      console.log('🔍 Response text:', responseText.substring(0, 200));
       
-      if (res.ok) {
-        Alert.alert("Succès", "Inscription réussie !");
-        onBack();
+      if (tokenResponse.ok) {
+        const tokenData = JSON.parse(responseText);
+        setAccessToken(tokenData.access_token);
+        setIsAuthenticated(true);
+        await fetchUserData(tokenData.access_token);
       } else {
-        Alert.alert("Erreur", data.message || "Erreur lors de l'inscription");
+        let errorData;
+        try {
+          errorData = JSON.parse(responseText);
+        } catch {
+          errorData = { error: 'Invalid response', raw: responseText };
+        }
+        console.error('Token exchange error:', errorData);
+        Alert.alert('Erreur', 'Échec de l\'authentification: ' + (errorData.error || 'Erreur inconnue'));
       }
     } catch (error) {
-      console.error("Erreur de connexion:", error);
-      Alert.alert(
-        "Erreur de connexion", 
-        "Impossible de contacter le serveur. Vérifiez que l'API est démarrée et que l'URL est correcte."
-      );
+      console.error('Erreur auth:', error);
+      Alert.alert('Erreur', 'Problème de connexion');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <View style={styles.formContainer}>
-      <Text style={styles.title}>Inscription</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Nom"
-        value={name}
-        onChangeText={setName}
-        autoCapitalize="words"
-        editable={!loading}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        editable={!loading}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Mot de passe"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        editable={!loading}
-      />
-      <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]} 
-        onPress={handleRegister} 
-        disabled={loading}
-      >
-        <Text style={styles.text}>{loading ? "En cours..." : "S'inscrire"}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onBack} style={{ marginTop: 16 }} disabled={loading}>
-        <Text style={{ color: loading ? '#ccc' : '#888' }}>Retour</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
+  const fetchUserData = async (token: string) => {
+    try {
+      setLoading(true);
+      
+      // Récupérer le profil directement depuis Spotify
+      const profileResponse = await fetch('https://api.spotify.com/v1/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        setProfile(profileData);
+      }
 
-export default function App() {
-  const [showRegister, setShowRegister] = useState(false);
-  const [showSpotifyTest, setShowSpotifyTest] = useState(false);
-  
-  if (showSpotifyTest) {
-    return <SpotifyTest onBack={() => setShowSpotifyTest(false)} />;
+      // Récupérer les playlists directement depuis Spotify
+      const playlistsResponse = await fetch('https://api.spotify.com/v1/me/playlists', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (playlistsResponse.ok) {
+        const playlistsData = await playlistsResponse.json();
+        setPlaylists(playlistsData.items);
+      }
+    } catch (error) {
+      console.error('Erreur fetch data:', error);
+      Alert.alert('Erreur', 'Impossible de récupérer les données utilisateur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = () => {
+    promptAsync();
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setProfile(null);
+    setPlaylists([]);
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Chargement...</Text>
+        <StatusBar style="light" />
+      </View>
+    );
   }
-  
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loginContainer}>
+          <Text style={styles.title}>🎵 Custom Spotify</Text>
+          <Text style={styles.subtitle}>
+            Connectez-vous avec votre compte Spotify pour accéder à vos données
+          </Text>
+          
+          {/* Debug: Afficher l'URL de redirection */}
+          <TouchableOpacity 
+            style={styles.debugButton}
+            onPress={() => Alert.alert('URL de redirection', redirectUri)}
+          >
+            <Text style={styles.debugButtonText}>
+              🔍 Voir URL de redirection
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.loginButton}
+            onPress={handleLogin}
+            disabled={!request}
+          >
+            <Text style={styles.loginButtonText}>
+              Se connecter avec Spotify
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      {showRegister ? (
-        <RegisterForm onBack={() => setShowRegister(false)} />
-      ) : (
-        <>
-          <Text style={styles.appTitle}>🎵 Custom Spotify</Text>
-          <Text style={styles.subtitle}>Application de test</Text>
-          
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => setShowRegister(true)}
-          >
-            <Text style={styles.text}>📝 Inscription</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.button, styles.spotifyButton]}
-            onPress={() => setShowSpotifyTest(true)}
-          >
-            <Text style={[styles.text, styles.spotifyText]}>🎵 Test Spotify API</Text>
-          </TouchableOpacity>
-        </>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>🎵 Custom Spotify</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Déconnexion</Text>
+        </TouchableOpacity>
+      </View>
+
+      {profile && (
+        <View style={styles.profileSection}>
+          <Text style={styles.sectionTitle}>Profil</Text>
+          <View style={styles.profileCard}>
+            {profile.images?.[0] && (
+              <Image 
+                source={{ uri: profile.images[0].url }} 
+                style={styles.profileImage}
+              />
+            )}
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{profile.display_name}</Text>
+              <Text style={styles.profileEmail}>{profile.email}</Text>
+              <Text style={styles.profileStats}>
+                {profile.followers?.total} abonnés • {profile.country}
+              </Text>
+            </View>
+          </View>
+        </View>
       )}
-      <StatusBar style="auto" />
-    </View>
+
+      <View style={styles.playlistsSection}>
+        <Text style={styles.sectionTitle}>Mes Playlists ({playlists.length})</Text>
+        {playlists.map((playlist) => (
+          <View key={playlist.id} style={styles.playlistCard}>
+            {playlist.images?.[0] && (
+              <Image 
+                source={{ uri: playlist.images[0].url }} 
+                style={styles.playlistImage}
+              />
+            )}
+            <View style={styles.playlistInfo}>
+              <Text style={styles.playlistName}>{playlist.name}</Text>
+              <Text style={styles.playlistDescription} numberOfLines={2}>
+                {playlist.description || 'Aucune description'}
+              </Text>
+              <Text style={styles.playlistTracks}>
+                {playlist.tracks?.total} pistes
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <StatusBar style="light" />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#121212',
   },
-  appTitle: {
+  loginContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 60,
+  },
+  title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1db954',
-    marginBottom: 8,
+    color: '#1DB954',
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
-    marginBottom: 40,
+    color: '#B3B3B3',
+    textAlign: 'center',
+    marginVertical: 20,
+    lineHeight: 24,
+  },
+  loginButton: {
+    backgroundColor: '#1DB954',
+    paddingHorizontal: 40,
+    paddingVertical: 15,
+    borderRadius: 25,
+    marginTop: 20,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  logoutButton: {
+    backgroundColor: '#333',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+  },
+  logoutButtonText: {
+    color: '#B3B3B3',
+    fontSize: 14,
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 18,
     textAlign: 'center',
   },
-  button: {
-    padding: 16,
-    backgroundColor: "#fee2e2",
-    borderRadius: 8,
-    alignItems: "center",
-    margin: 16,
-    minWidth: 200,
+  profileSection: {
+    padding: 20,
   },
-  spotifyButton: {
-    backgroundColor: "#dcfce7",
-  },
-  buttonDisabled: {
-    backgroundColor: "#f3f4f6",
-  },
-  text: {
-    color: "#b91c1c",
-    fontWeight: "bold",
-    fontSize: 18,
-  },
-  spotifyText: {
-    color: "#16a34a",
-  },
-  formContainer: {
-    width: 300,
-    backgroundColor: '#f9fafb',
-    padding: 24,
-    borderRadius: 12,
-    alignItems: 'stretch',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  title: {
+  sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#b91c1c',
-    textAlign: 'center',
+    color: 'white',
+    marginBottom: 15,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    backgroundColor: '#fff',
+  profileCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 15,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: '#B3B3B3',
+    marginBottom: 5,
+  },
+  profileStats: {
+    fontSize: 12,
+    color: '#1DB954',
+  },
+  playlistsSection: {
+    padding: 20,
+  },
+  playlistCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  playlistImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 5,
+    marginRight: 15,
+  },
+  playlistInfo: {
+    flex: 1,
+  },
+  playlistName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  playlistDescription: {
+    fontSize: 12,
+    color: '#B3B3B3',
+    marginBottom: 5,
+  },
+  playlistTracks: {
+    fontSize: 12,
+    color: '#1DB954',
+  },
+  debugButton: {
+    backgroundColor: '#333',
+    paddingHorizontal: 40,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 10,
+  },
+  debugButtonText: {
+    color: '#B3B3B3',
+    fontSize: 14,
   },
 });

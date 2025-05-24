@@ -80,9 +80,6 @@ importers:
       '@auth/nextjs':
         specifier: 0.0.0-380f8d56
         version: 0.0.0-380f8d56(next@15.3.2)
-      '@cineverse/db':
-        specifier: workspace:*
-        version: link:../../packages/db
       '@next-auth/prisma-adapter':
         specifier: ^1.0.7
         version: 1.0.7(@prisma/client@6.8.2)(next-auth@4.24.11)
@@ -174,6 +171,9 @@ importers:
       eslint-config-next:
         specifier: 15.3.2
         version: 15.3.2(eslint@9.7.0)(typescript@5.8.3)
+      prisma:
+        specifier: ^6.8.2
+        version: 6.8.2(typescript@5.8.3)
       tailwindcss:
         specifier: ^4.1.7
         version: 4.1.7
