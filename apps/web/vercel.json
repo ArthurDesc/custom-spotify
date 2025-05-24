@@ -2,16 +2,5 @@
   "buildCommand": "cd ../.. && pnpm build",
   "outputDirectory": ".next",
   "installCommand": "cd ../.. && pnpm install",
-  "framework": "nextjs",
-  "env": {
-    "NEXTAUTH_SECRET": "@nextauth-secret",
-    "SPOTIFY_CLIENT_ID": "@spotify-client-id",
-    "SPOTIFY_CLIENT_SECRET": "@spotify-client-secret",
-    "DATABASE_URL": "@database-url"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_VERCEL_URL": "$VERCEL_URL"
-    }
-  }
+  "framework": "nextjs"
 } 
