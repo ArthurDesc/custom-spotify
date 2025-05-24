@@ -17,7 +17,7 @@ export default function HomePage() {
             Nous pouvons maintenant ajouter l&apos;authentification Spotify !
           </p>
         </div>
-      </div>
+          </div>
     </div>
   );
 }
