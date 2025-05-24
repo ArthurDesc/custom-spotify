@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { PlaybackState, Track } from '../types/spotify';
 import { getRepeatIcon, getRepeatColor, getRepeatLabel } from '../utils/formatters';
 
@@ -25,6 +26,18 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   onToggleRepeat,
 }) => {
   if (!currentTrack || !playbackState) return null;
+
+  // Fonction pour obtenir l'icône de répétition appropriée
+  const getRepeatIconName = (repeatState: string | undefined) => {
+    switch (repeatState) {
+      case 'track':
+        return 'repeat-outline' as const;
+      case 'context':
+        return 'repeat' as const;
+      default:
+        return 'repeat-outline' as const;
+    }
+  };
 
   return (
     <View style={styles.playerSection}>
@@ -52,20 +65,30 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
       {/* Contrôles de lecture */}
       <View style={styles.playerControls}>
         <TouchableOpacity style={styles.controlButton} onPress={onPrevious}>
-          <Text style={styles.controlButtonText}>⏮️</Text>
+          <Ionicons 
+            name="play-skip-back" 
+            size={24} 
+            color="#B3B3B3" 
+          />
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.controlButton, styles.playPauseButton]} 
           onPress={playbackState.is_playing ? onPause : onResume}
         >
-          <Text style={styles.controlButtonText}>
-            {playbackState.is_playing ? '⏸️' : '▶️'}
-          </Text>
+          <Ionicons 
+            name={playbackState.is_playing ? "pause" : "play"} 
+            size={24} 
+            color="#FFFFFF" 
+          />
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.controlButton} onPress={onNext}>
-          <Text style={styles.controlButtonText}>⏭️</Text>
+          <Ionicons 
+            name="play-skip-forward" 
+            size={24} 
+            color="#B3B3B3" 
+          />
         </TouchableOpacity>
       </View>
 
@@ -75,12 +98,11 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           style={styles.extraControlButton} 
           onPress={onToggleShuffle}
         >
-          <Text style={[
-            styles.extraControlButtonText,
-            { color: playbackState?.shuffle_state ? '#1DB954' : '#B3B3B3' }
-          ]}>
-            🔀
-          </Text>
+          <Ionicons
+            name="shuffle"
+            size={20}
+            color={playbackState?.shuffle_state ? '#1DB954' : '#B3B3B3'}
+          />
           <Text style={[
             styles.extraControlLabel,
             { color: playbackState?.shuffle_state ? '#1DB954' : '#B3B3B3' }
@@ -93,12 +115,11 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           style={styles.extraControlButton} 
           onPress={onToggleRepeat}
         >
-          <Text style={[
-            styles.extraControlButtonText,
-            { color: getRepeatColor(playbackState?.repeat_state) }
-          ]}>
-            {getRepeatIcon(playbackState?.repeat_state)}
-          </Text>
+          <Ionicons
+            name={getRepeatIconName(playbackState?.repeat_state)}
+            size={20}
+            color={getRepeatColor(playbackState?.repeat_state)}
+          />
           <Text style={[
             styles.extraControlLabel,
             { color: getRepeatColor(playbackState?.repeat_state) }
@@ -165,10 +186,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 20,
-  },
-  controlButtonText: {
-    color: '#B3B3B3',
-    fontSize: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   playPauseButton: {
     backgroundColor: '#1DB954',
@@ -186,12 +205,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 10,
   },
-  extraControlButtonText: {
-    fontSize: 20,
-    marginBottom: 5,
-  },
   extraControlLabel: {
     fontSize: 12,
     textAlign: 'center',
+    marginTop: 5,
   },
 }); 
