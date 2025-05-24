@@ -1,405 +1,99 @@
 import './global.css';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+
+// Hooks personnalisés
+import { useSpotifyAuth } from './hooks/useSpotifyAuth';
+import { useLikedTracks } from './hooks/useLikedTracks';
+import { usePlayback } from './hooks/usePlayback';
+
+// Composants
+import { PlayerControls } from './components/PlayerControls';
+import { TrackList } from './components/TrackList';
+import { PlaylistCard } from './components/PlaylistCard';
+import { LoadingSpinner } from './components/LoadingSpinner';
 import SimpleNativeWindTest from "./components/SimpleNativeWindTest";
 import NativeWindVerification from "./components/NativeWindVerification";
 
 WebBrowser.maybeCompleteAuthSession();
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-const SPOTIFY_CLIENT_ID = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
-
-console.log('🔍 API_URL utilisée:', API_URL);
-
-interface SpotifyProfile {
-  id: string;
-  display_name: string;
-  email: string;
-  images: Array<{ url: string }>;
-  followers: { total: number };
-  country: string;
-}
-
-interface Playlist {
-  id: string;
-  name: string;
-  description: string;
-  images: Array<{ url: string }>;
-  tracks: { total: number };
-}
-
-interface Track {
-  id: string;
-  name: string;
-  artists: Array<{ name: string }>;
-  album: {
-    name: string;
-    images: Array<{ url: string }>;
-  };
-  duration_ms: number;
-  preview_url: string | null;
-  uri: string;
-}
-
-interface PlaybackState {
-  is_playing: boolean;
-  item: Track | null;
-  progress_ms: number;
-  device: {
-    id: string;
-    name: string;
-    type: string;
-    volume_percent: number;
-  } | null;
-}
-
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [profile, setProfile] = useState<SpotifyProfile | null>(null);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
-  const [playlistTracks, setPlaylistTracks] = useState<Track[]>([]);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [playbackState, setPlaybackState] = useState<PlaybackState | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [showLikedTracks, setShowLikedTracks] = useState(false);
 
-  const discovery = {
-    authorizationEndpoint: 'https://accounts.spotify.com/authorize',
-    tokenEndpoint: 'https://accounts.spotify.com/api/token',
-  };
+  // Hooks personnalisés
+  const auth = useSpotifyAuth();
+  const likedTracks = useLikedTracks();
+  const playback = usePlayback();
 
-  // Générer l'URL de redirection
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: 'custom-spotify',
-    path: 'auth'
-  });
-
-  // Debug: Afficher l'URL de redirection
-  console.log('🔍 URL de redirection générée:', redirectUri);
-
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: SPOTIFY_CLIENT_ID!,
-      scopes: [
-        'user-read-email',
-        'user-read-private',
-        'playlist-read-private',
-        'user-read-playback-state',
-        'user-modify-playback-state',
-        'user-read-currently-playing',
-        'user-library-read',
-        'user-top-read',
-        'user-read-recently-played'
-      ],
-      usePKCE: false,
-      redirectUri,
-      responseType: AuthSession.ResponseType.Code,
-    },
-    discovery
-  );
-
+  // Initialiser les données après authentification
   useEffect(() => {
-    if (response?.type === 'success') {
-      const { code } = response.params;
-      handleAuthSuccess(code);
-    } else if (response?.type === 'error') {
-      console.error('Auth error:', response.error);
-      Alert.alert('Erreur d\'authentification', response.error?.message || 'Erreur inconnue');
+    if (auth.isAuthenticated) {
+      initializeData();
     }
-  }, [response]);
+  }, [auth.isAuthenticated]);
 
-  const handleAuthSuccess = async (code: string) => {
+  const initializeData = async () => {
     try {
-      setLoading(true);
-      
-      console.log('🔍 Code reçu:', code);
-      console.log('🔍 Redirect URI utilisée:', redirectUri);
-      
-      // Échanger le code contre un token via notre API backend (endpoint public)
-      const tokenResponse = await fetch(`${API_URL}/api/spotify-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          code,
-          redirectUri
-        }),
-      });
-      
-      console.log('🔍 Response status:', tokenResponse.status);
-      const responseText = await tokenResponse.text();
-      console.log('🔍 Response text:', responseText.substring(0, 200));
-      
-      if (tokenResponse.ok) {
-        const tokenData = JSON.parse(responseText);
-        setAccessToken(tokenData.access_token);
-        setIsAuthenticated(true);
-        await fetchUserData(tokenData.access_token);
-      } else {
-        let errorData;
-        try {
-          errorData = JSON.parse(responseText);
-        } catch {
-          errorData = { error: 'Invalid response', raw: responseText };
-        }
-        console.error('Token exchange error:', errorData);
-        Alert.alert('Erreur', 'Échec de l\'authentification: ' + (errorData.error || 'Erreur inconnue'));
-      }
-    } catch (error) {
-      console.error('Erreur auth:', error);
-      Alert.alert('Erreur', 'Problème de connexion');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchUserData = async (token: string) => {
-    try {
-      setLoading(true);
-      
-      // Récupérer le profil directement depuis Spotify
-      const profileResponse = await fetch('https://api.spotify.com/v1/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json();
-        setProfile(profileData);
-      }
-
-      // Récupérer les playlists directement depuis Spotify
-      const playlistsResponse = await fetch('https://api.spotify.com/v1/me/playlists', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (playlistsResponse.ok) {
-        const playlistsData = await playlistsResponse.json();
-        setPlaylists(playlistsData.items);
-      }
-
+      // Charger les premiers titres likés
+      await likedTracks.fetchLikedTracks(0, true);
       // Récupérer l'état de lecture actuel
-      await fetchPlaybackState(token);
+      await playback.fetchPlaybackState();
     } catch (error) {
-      console.error('Erreur fetch data:', error);
-      Alert.alert('Erreur', 'Impossible de récupérer les données utilisateur');
-    } finally {
-      setLoading(false);
+      console.error('Erreur initialisation:', error);
     }
   };
 
-  const fetchPlaylistTracks = async (playlistId: string) => {
-    if (!accessToken) return;
-    
-    try {
-      setLoading(true);
-      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const tracks = data.items.map((item: any) => item.track).filter((track: any) => track);
-        setPlaylistTracks(tracks);
-      }
-    } catch (error) {
-      console.error('Erreur fetch tracks:', error);
-      Alert.alert('Erreur', 'Impossible de récupérer les pistes');
-    } finally {
-      setLoading(false);
-    }
+  const handleLikedTracksPress = () => {
+    setShowLikedTracks(true);
   };
 
-  const fetchPlaybackState = async (token: string) => {
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok && response.status !== 204) {
-        const data = await response.json();
-        setPlaybackState(data);
-        setCurrentTrack(data.item);
-      }
-    } catch (error) {
-      console.error('Erreur fetch playback:', error);
-    }
-  };
-
-  const playTrack = async (trackUri: string) => {
-    if (!accessToken) return;
-    
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player/play', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uris: [trackUri]
-        }),
-      });
-      
-      if (response.ok || response.status === 204) {
-        // Attendre un peu puis récupérer le nouvel état
-        setTimeout(() => fetchPlaybackState(accessToken), 1000);
-      } else {
-        Alert.alert('Erreur', 'Impossible de lire cette piste. Assurez-vous qu\'un appareil Spotify est actif.');
-      }
-    } catch (error) {
-      console.error('Erreur play track:', error);
-      Alert.alert('Erreur', 'Problème lors de la lecture');
-    }
-  };
-
-  const pausePlayback = async () => {
-    if (!accessToken) return;
-    
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player/pause', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      
-      if (response.ok || response.status === 204) {
-        setTimeout(() => fetchPlaybackState(accessToken), 500);
-      }
-    } catch (error) {
-      console.error('Erreur pause:', error);
-    }
-  };
-
-  const resumePlayback = async () => {
-    if (!accessToken) return;
-    
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player/play', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      
-      if (response.ok || response.status === 204) {
-        setTimeout(() => fetchPlaybackState(accessToken), 500);
-      }
-    } catch (error) {
-      console.error('Erreur resume:', error);
-    }
-  };
-
-  const skipToNext = async () => {
-    if (!accessToken) return;
-    
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player/next', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      
-      if (response.ok || response.status === 204) {
-        setTimeout(() => fetchPlaybackState(accessToken), 1000);
-      }
-    } catch (error) {
-      console.error('Erreur skip:', error);
-    }
-  };
-
-  const skipToPrevious = async () => {
-    if (!accessToken) return;
-    
-    try {
-      const response = await fetch('https://api.spotify.com/v1/me/player/previous', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-      
-      if (response.ok || response.status === 204) {
-        setTimeout(() => fetchPlaybackState(accessToken), 1000);
-      }
-    } catch (error) {
-      console.error('Erreur previous:', error);
-    }
-  };
-
-  const handleLogin = () => {
-    promptAsync();
+  const handleBackToHome = () => {
+    setShowLikedTracks(false);
   };
 
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    setProfile(null);
-    setPlaylists([]);
-    setSelectedPlaylist(null);
-    setPlaylistTracks([]);
-    setCurrentTrack(null);
-    setPlaybackState(null);
+    auth.logout();
+    likedTracks.reset();
+    playback.reset();
+    setShowLikedTracks(false);
   };
 
-  const handlePlaylistSelect = (playlist: Playlist) => {
-    setSelectedPlaylist(playlist);
-    fetchPlaylistTracks(playlist.id);
+  const handleTrackPress = (trackUri: string) => {
+    playback.playTrack(trackUri, likedTracks.likedTracksInfo.tracks);
   };
 
-  const handleBackToPlaylists = () => {
-    setSelectedPlaylist(null);
-    setPlaylistTracks([]);
-  };
-
-  const formatDuration = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  if (loading) {
+  // Écran de chargement
+  if (auth.loading || likedTracks.loading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <LoadingSpinner />
         <StatusBar style="light" />
       </View>
     );
   }
 
-  if (!isAuthenticated) {
+  // Écran de connexion
+  if (!auth.isAuthenticated) {
     return (
       <View style={styles.container}>
         <View style={styles.loginContainer}>
           <Text style={styles.title}>🎵 Bienvenu fréro ! </Text>
           <Text style={styles.subtitle}>
-            Connectez-vous avec votre compte Spotify pour accéder à vos données
+            Connectez-vous avec votre compte Spotify pour accéder à vos titres likés
           </Text>
 
           <SimpleNativeWindTest />
 
-          {/* Composant de vérification complet */}
           <ScrollView style={{ maxHeight: 300 }} className="w-full">
             <NativeWindVerification />
           </ScrollView>
 
           <TouchableOpacity 
             style={styles.loginButton}
-            onPress={handleLogin}
-            disabled={!request}
+            onPress={auth.login}
+            disabled={!auth.request}
           >
             <Text style={styles.loginButtonText}>
               Se connecter avec Spotify
@@ -411,6 +105,58 @@ export default function App() {
     );
   }
 
+  // Vue détaillée des titres likés
+  if (showLikedTracks) {
+    const displayCurrentTrack = playback.getDisplayCurrentTrack();
+    
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackToHome}>
+            <Text style={styles.backButtonText}>◀️ Retour</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Titres likés</Text>
+          <View style={styles.placeholder} />
+        </View>
+
+        {/* Lecteur de musique */}
+        <PlayerControls
+          currentTrack={displayCurrentTrack}
+          playbackState={playback.playbackState}
+          onPause={playback.pausePlayback}
+          onResume={playback.resumePlayback}
+          onNext={playback.skipToNext}
+          onPrevious={playback.skipToPrevious}
+          onToggleShuffle={playback.toggleShuffle}
+          onToggleRepeat={playback.toggleRepeat}
+        />
+
+        {/* Liste des titres */}
+        <View style={styles.tracksSection}>
+          <Text style={styles.sectionTitle}>
+            {likedTracks.likedTracksInfo.total} titres • {likedTracks.likedTracksInfo.tracks.length} chargés
+          </Text>
+          
+          <TrackList
+            tracks={likedTracks.likedTracksInfo.tracks}
+            currentTrackId={displayCurrentTrack?.id}
+            loadingTrackId={playback.loadingTrackId}
+            isPlaying={playback.playbackState?.is_playing}
+            onTrackPress={handleTrackPress}
+            onLoadMore={likedTracks.loadMoreTracks}
+            loadingMore={likedTracks.loadingMore}
+            hasMore={likedTracks.likedTracksInfo.hasMore}
+          />
+        </View>
+
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+
+  // Page d'accueil
+  const displayCurrentTrack = playback.getDisplayCurrentTrack();
+  
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -420,152 +166,29 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {profile && (
-        <View style={styles.profileSection}>
-          <Text style={styles.sectionTitle}>Profil</Text>
-          <View style={styles.profileCard}>
-            {profile.images?.[0] && (
-              <Image 
-                source={{ uri: profile.images[0].url }} 
-                style={styles.profileImage}
-              />
-            )}
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{profile.display_name}</Text>
-              <Text style={styles.profileEmail}>{profile.email}</Text>
-              <Text style={styles.profileStats}>
-                {profile.followers?.total} abonnés • {profile.country}
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
+      {/* Lecteur de musique */}
+      <PlayerControls
+        currentTrack={displayCurrentTrack}
+        playbackState={playback.playbackState}
+        onPause={playback.pausePlayback}
+        onResume={playback.resumePlayback}
+        onNext={playback.skipToNext}
+        onPrevious={playback.skipToPrevious}
+        onToggleShuffle={playback.toggleShuffle}
+        onToggleRepeat={playback.toggleRepeat}
+      />
 
-      {/* Lecteur de musique actuel */}
-      {currentTrack && playbackState && (
-        <View style={styles.playerSection}>
-          <Text style={styles.sectionTitle}>En cours de lecture</Text>
-          <View style={styles.playerCard}>
-            {currentTrack.album.images?.[0] && (
-              <Image 
-                source={{ uri: currentTrack.album.images[0].url }} 
-                style={styles.playerImage}
-              />
-            )}
-            <View style={styles.playerInfo}>
-              <Text style={styles.playerTrackName} numberOfLines={1}>
-                {currentTrack.name}
-              </Text>
-              <Text style={styles.playerArtistName} numberOfLines={1}>
-                {currentTrack.artists.map(a => a.name).join(', ')}
-              </Text>
-              <Text style={styles.playerAlbumName} numberOfLines={1}>
-                {currentTrack.album.name}
-              </Text>
-            </View>
-          </View>
-          
-          {/* Contrôles de lecture */}
-          <View style={styles.playerControls}>
-            <TouchableOpacity style={styles.controlButton} onPress={skipToPrevious}>
-              <Text style={styles.controlButtonText}>⏮️</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.controlButton, styles.playPauseButton]} 
-              onPress={playbackState.is_playing ? pausePlayback : resumePlayback}
-            >
-              <Text style={styles.controlButtonText}>
-                {playbackState.is_playing ? '⏸️' : '▶️'}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.controlButton} onPress={skipToNext}>
-              <Text style={styles.controlButtonText}>⏭️</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Navigation: Playlists ou Tracks */}
-      {!selectedPlaylist ? (
-        <View style={styles.playlistsSection}>
-          <Text style={styles.sectionTitle}>Mes Playlists ({playlists.length})</Text>
-          {playlists.map((playlist) => (
-            <TouchableOpacity 
-              key={playlist.id} 
-              style={styles.playlistCard}
-              onPress={() => handlePlaylistSelect(playlist)}
-            >
-              {playlist.images?.[0] && (
-                <Image 
-                  source={{ uri: playlist.images[0].url }} 
-                  style={styles.playlistImage}
-                />
-              )}
-              <View style={styles.playlistInfo}>
-                <Text style={styles.playlistName}>{playlist.name}</Text>
-                <Text style={styles.playlistDescription} numberOfLines={2}>
-                  {playlist.description || 'Aucune description'}
-                </Text>
-                <Text style={styles.playlistTracks}>
-                  {playlist.tracks?.total} pistes
-                </Text>
-              </View>
-              <Text style={styles.playlistArrow}>▶️</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.tracksSection}>
-          <View style={styles.tracksHeader}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBackToPlaylists}>
-              <Text style={styles.backButtonText}>◀️ Retour</Text>
-            </TouchableOpacity>
-            <Text style={styles.sectionTitle}>{selectedPlaylist.name}</Text>
-          </View>
-          
-          {playlistTracks.map((track, index) => (
-            <TouchableOpacity 
-              key={track.id} 
-              style={[
-                styles.trackCard,
-                currentTrack?.id === track.id && styles.currentTrackCard
-              ]}
-              onPress={() => playTrack(track.uri)}
-            >
-              {track.album.images?.[0] && (
-                <Image 
-                  source={{ uri: track.album.images[0].url }} 
-                  style={styles.trackImage}
-                />
-              )}
-              <View style={styles.trackInfo}>
-                <Text style={[
-                  styles.trackName,
-                  currentTrack?.id === track.id && styles.currentTrackText
-                ]} numberOfLines={1}>
-                  {track.name}
-                </Text>
-                <Text style={styles.trackArtist} numberOfLines={1}>
-                  {track.artists.map(a => a.name).join(', ')}
-                </Text>
-                <Text style={styles.trackAlbum} numberOfLines={1}>
-                  {track.album.name}
-                </Text>
-              </View>
-              <View style={styles.trackMeta}>
-                <Text style={styles.trackDuration}>
-                  {formatDuration(track.duration_ms)}
-                </Text>
-                {currentTrack?.id === track.id && playbackState?.is_playing && (
-                  <Text style={styles.playingIndicator}>🎵</Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      {/* Playlist des titres likés */}
+      <View style={styles.playlistsSection}>
+        <Text style={styles.sectionTitle}>Vos playlists</Text>
+        
+        <PlaylistCard
+          title="Titres likés"
+          description="Vos titres favoris sur Spotify"
+          trackCount={likedTracks.likedTracksInfo.total}
+          onPress={handleLikedTracksPress}
+        />
+      </View>
 
       <StatusBar style="light" />
     </ScrollView>
@@ -595,6 +218,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1DB954',
     textAlign: 'center',
+    flex: 1,
   },
   subtitle: {
     fontSize: 16,
@@ -625,153 +249,6 @@ const styles = StyleSheet.create({
     color: '#B3B3B3',
     fontSize: 14,
   },
-  loadingText: {
-    color: 'white',
-    fontSize: 18,
-    textAlign: 'center',
-  },
-  profileSection: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 15,
-  },
-  profileCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 15,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 5,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: '#B3B3B3',
-    marginBottom: 5,
-  },
-  profileStats: {
-    fontSize: 12,
-    color: '#1DB954',
-  },
-  playlistsSection: {
-    padding: 20,
-  },
-  playlistCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    alignItems: 'center',
-  },
-  playlistImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 5,
-    marginRight: 15,
-  },
-  playlistInfo: {
-    flex: 1,
-  },
-  playlistName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 5,
-  },
-  playlistDescription: {
-    fontSize: 12,
-    color: '#B3B3B3',
-    marginBottom: 5,
-  },
-  playlistTracks: {
-    fontSize: 12,
-    color: '#1DB954',
-  },
-  playlistArrow: {
-    fontSize: 16,
-    color: '#B3B3B3',
-    marginLeft: 10,
-  },
-  playerSection: {
-    padding: 20,
-  },
-  playerCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-  },
-  playerImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 15,
-  },
-  playerInfo: {
-    flex: 1,
-  },
-  playerTrackName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 5,
-  },
-  playerArtistName: {
-    fontSize: 14,
-    color: '#B3B3B3',
-    marginBottom: 5,
-  },
-  playerAlbumName: {
-    fontSize: 12,
-    color: '#B3B3B3',
-    marginBottom: 5,
-  },
-  playerControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  controlButton: {
-    backgroundColor: '#333',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  controlButtonText: {
-    color: '#B3B3B3',
-    fontSize: 14,
-  },
-  playPauseButton: {
-    backgroundColor: '#1DB954',
-  },
-  tracksSection: {
-    padding: 20,
-  },
-  tracksHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
   backButton: {
     backgroundColor: '#333',
     paddingHorizontal: 15,
@@ -782,67 +259,20 @@ const styles = StyleSheet.create({
     color: '#B3B3B3',
     fontSize: 14,
   },
-  trackCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    alignItems: 'center',
+  placeholder: {
+    width: 80,
   },
-  currentTrackCard: {
-    backgroundColor: '#333',
-  },
-  trackImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 5,
-    marginRight: 15,
-  },
-  trackInfo: {
-    flex: 1,
-  },
-  trackName: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 5,
+    marginBottom: 15,
   },
-  currentTrackText: {
-    color: '#1DB954',
+  playlistsSection: {
+    padding: 20,
   },
-  trackArtist: {
-    fontSize: 14,
-    color: '#B3B3B3',
-    marginBottom: 5,
-  },
-  trackAlbum: {
-    fontSize: 12,
-    color: '#B3B3B3',
-    marginBottom: 5,
-  },
-  trackMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  trackDuration: {
-    fontSize: 12,
-    color: '#B3B3B3',
-  },
-  playingIndicator: {
-    fontSize: 16,
-    color: '#1DB954',
-    marginLeft: 10,
-  },
-  debugButton: {
-    backgroundColor: '#333',
-    paddingHorizontal: 40,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginTop: 10,
-  },
-  debugButtonText: {
-    color: '#B3B3B3',
-    fontSize: 14,
+  tracksSection: {
+    flex: 1,
+    padding: 20,
   },
 });
