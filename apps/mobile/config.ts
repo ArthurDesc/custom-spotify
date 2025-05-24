@@ -9,6 +9,7 @@ export const API_CONFIG = {
   ENDPOINTS: {
     REGISTER: '/api/auth/register',
     LOGIN: '/api/auth/login',
+    SPOTIFY_TEST: '/api/spotify/test',
   }
 };
 

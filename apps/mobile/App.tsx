@@ -3,6 +3,7 @@ import { View, Alert, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { TextInput } from "react-native";
 import { API_CONFIG } from "./config";
+import { SpotifyTest } from "./components/SpotifyTest";
 
 function RegisterForm({ onBack }: { onBack: () => void }) {
   const [name, setName] = React.useState("");
@@ -96,6 +97,11 @@ function RegisterForm({ onBack }: { onBack: () => void }) {
 
 export default function App() {
   const [showRegister, setShowRegister] = useState(false);
+  const [showSpotifyTest, setShowSpotifyTest] = useState(false);
+  
+  if (showSpotifyTest) {
+    return <SpotifyTest onBack={() => setShowSpotifyTest(false)} />;
+  }
   
   return (
     <View style={styles.container}>
@@ -103,11 +109,21 @@ export default function App() {
         <RegisterForm onBack={() => setShowRegister(false)} />
       ) : (
         <>
+          <Text style={styles.appTitle}>🎵 Custom Spotify</Text>
+          <Text style={styles.subtitle}>Application de test</Text>
+          
           <TouchableOpacity
             style={styles.button}
             onPress={() => setShowRegister(true)}
           >
-            <Text style={styles.text}>Inscription</Text>
+            <Text style={styles.text}>📝 Inscription</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.button, styles.spotifyButton]}
+            onPress={() => setShowSpotifyTest(true)}
+          >
+            <Text style={[styles.text, styles.spotifyText]}>🎵 Test Spotify API</Text>
           </TouchableOpacity>
         </>
       )}
@@ -123,12 +139,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  appTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1db954',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 40,
+    textAlign: 'center',
+  },
   button: {
     padding: 16,
     backgroundColor: "#fee2e2",
     borderRadius: 8,
     alignItems: "center",
     margin: 16,
+    minWidth: 200,
+  },
+  spotifyButton: {
+    backgroundColor: "#dcfce7",
   },
   buttonDisabled: {
     backgroundColor: "#f3f4f6",
@@ -137,6 +170,9 @@ const styles = StyleSheet.create({
     color: "#b91c1c",
     fontWeight: "bold",
     fontSize: 18,
+  },
+  spotifyText: {
+    color: "#16a34a",
   },
   formContainer: {
     width: 300,
