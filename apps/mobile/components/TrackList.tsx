@@ -2,6 +2,7 @@ import React from 'react';
 import { View, FlatList, TouchableOpacity, Text, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import { Track } from '../types/spotify';
 import { formatDuration } from '../utils/formatters';
+import { colors } from '../utils/colors';
 
 interface TrackListProps {
   tracks: Track[];
@@ -32,7 +33,12 @@ export const TrackList: React.FC<TrackListProps> = ({
       <TouchableOpacity 
         style={[
           styles.trackCard,
-          isCurrentTrack && styles.currentTrackCard
+          { backgroundColor: colors.background.card },
+          isCurrentTrack && { 
+            backgroundColor: colors.background.secondary,
+            borderColor: colors.primary.purple,
+            borderWidth: 1 
+          }
         ]}
         onPress={() => onTrackPress(track.uri)}
         disabled={isLoading}
@@ -49,26 +55,21 @@ export const TrackList: React.FC<TrackListProps> = ({
         <View style={styles.trackInfo}>
           <Text style={[
             styles.trackName,
-            isCurrentTrack && styles.currentTrackText
+            { color: colors.text.primary },
+            isCurrentTrack && { color: colors.primary.purple }
           ]} numberOfLines={1}>
             {track.name}
           </Text>
-          <Text style={styles.trackArtist} numberOfLines={1}>
+          <Text style={[styles.trackArtist, { color: colors.text.secondary }]} numberOfLines={1}>
             {track.artists.map(a => a.name).join(', ')}
-          </Text>
-          <Text style={styles.trackAlbum} numberOfLines={1}>
-            {track.album.name}
           </Text>
         </View>
         <View style={styles.trackMeta}>
-          <Text style={styles.trackDuration}>
+          <Text style={[styles.trackDuration, { color: colors.text.secondary }]}>
             {formatDuration(track.duration_ms)}
           </Text>
           {isLoading && (
-            <ActivityIndicator size="small" color="#1DB954" style={{ marginTop: 5 }} />
-          )}
-          {isCurrentTrack && isPlaying && !isLoading && (
-            <Text style={styles.playingIndicator}>🎵</Text>
+            <ActivityIndicator size="small" color={colors.primary.purple} style={{ marginTop: 5 }} />
           )}
         </View>
       </TouchableOpacity>
@@ -79,8 +80,8 @@ export const TrackList: React.FC<TrackListProps> = ({
     if (!loadingMore) return null;
     return (
       <View style={styles.loadingFooter}>
-        <ActivityIndicator size="small" color="#1DB954" />
-        <Text style={styles.loadingText}>Chargement...</Text>
+        <ActivityIndicator size="small" color={colors.primary.purple} />
+        <Text style={[styles.loadingText, { color: colors.text.secondary }]}>Chargement...</Text>
       </View>
     );
   };
@@ -105,22 +106,16 @@ const styles = StyleSheet.create({
   },
   trackCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
     alignItems: 'center',
   },
-  currentTrackCard: {
-    backgroundColor: '#333',
-    borderColor: '#1DB954',
-    borderWidth: 1,
-  },
   trackImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 5,
-    marginRight: 15,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    marginRight: 12,
   },
   trackImageLoading: {
     opacity: 0.6,
@@ -129,43 +124,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   trackName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 5,
-  },
-  currentTrackText: {
-    color: '#1DB954',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   trackArtist: {
-    fontSize: 14,
-    color: '#B3B3B3',
-    marginBottom: 5,
-  },
-  trackAlbum: {
-    fontSize: 12,
-    color: '#B3B3B3',
-    marginBottom: 5,
+    fontSize: 13,
+    marginBottom: 0,
   },
   trackMeta: {
     flexDirection: 'column',
     alignItems: 'flex-end',
   },
   trackDuration: {
-    fontSize: 12,
-    color: '#B3B3B3',
-  },
-  playingIndicator: {
-    fontSize: 16,
-    color: '#1DB954',
-    marginTop: 5,
+    fontSize: 11,
   },
   loadingFooter: {
     padding: 20,
     alignItems: 'center',
   },
   loadingText: {
-    color: '#B3B3B3',
     fontSize: 16,
     textAlign: 'center',
     marginTop: 10,

@@ -8,14 +8,20 @@ import * as WebBrowser from 'expo-web-browser';
 import { useSpotifyAuth } from './hooks/useSpotifyAuth';
 import { useLikedTracks } from './hooks/useLikedTracks';
 import { usePlayback } from './hooks/usePlayback';
+import { usePlaylists } from './hooks/usePlaylists';
 
 // Composants
 import { PlayerControls } from './components/PlayerControls';
 import { TrackList } from './components/TrackList';
 import { PlaylistCard } from './components/PlaylistCard';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import SimpleNativeWindTest from "./components/SimpleNativeWindTest";
-import NativeWindVerification from "./components/NativeWindVerification";
+import { MusicPlayerCard } from './components/MusicPlayerCard';
+import { MainLayout } from './components/MainLayout';
+import { HomeContent } from './components/HomeContent';
+import { LikedTracksContent } from './components/LikedTracksContent';
+
+// Couleurs
+import { colors } from './utils/colors';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -26,6 +32,7 @@ export default function App() {
   const auth = useSpotifyAuth();
   const likedTracks = useLikedTracks();
   const playback = usePlayback();
+  const playlists = usePlaylists();
 
   // Initialiser les données après authentification
   useEffect(() => {
@@ -40,6 +47,8 @@ export default function App() {
       await likedTracks.fetchLikedTracks(0, true);
       // Récupérer l'état de lecture actuel
       await playback.fetchPlaybackState();
+      // Charger les playlists
+      await playlists.fetchPlaylists();
     } catch (error) {
       console.error('Erreur initialisation:', error);
     }
@@ -57,6 +66,7 @@ export default function App() {
     auth.logout();
     likedTracks.reset();
     playback.reset();
+    playlists.reset();
     setShowLikedTracks(false);
   };
 
@@ -64,10 +74,15 @@ export default function App() {
     playback.playTrack(trackUri, likedTracks.likedTracksInfo.tracks);
   };
 
+  const handlePlaylistPress = (playlist: any) => {
+    // TODO: Implémenter la navigation vers la playlist
+    console.log('Playlist sélectionnée:', playlist.name);
+  };
+
   // Écran de chargement
   if (auth.loading || likedTracks.loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
         <LoadingSpinner />
         <StatusBar style="light" />
       </View>
@@ -77,25 +92,14 @@ export default function App() {
   // Écran de connexion
   if (!auth.isAuthenticated) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
         <View style={styles.loginContainer}>
-          <Text style={styles.title}>🎵 Bienvenu fréro ! </Text>
-          <Text style={styles.subtitle}>
-            Connectez-vous avec votre compte Spotify pour accéder à vos titres likés
-          </Text>
-
-          <SimpleNativeWindTest />
-
-          <ScrollView style={{ maxHeight: 300 }} className="w-full">
-            <NativeWindVerification />
-          </ScrollView>
-
           <TouchableOpacity 
-            style={styles.loginButton}
+            style={[styles.loginButton, { backgroundColor: colors.primary.purple }]}
             onPress={auth.login}
             disabled={!auth.request}
           >
-            <Text style={styles.loginButtonText}>
+            <Text style={[styles.loginButtonText, { color: colors.text.primary }]}>
               Se connecter avec Spotify
             </Text>
           </TouchableOpacity>
@@ -110,95 +114,66 @@ export default function App() {
     const displayCurrentTrack = playback.getDisplayCurrentTrack();
     
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBackToHome}>
-            <Text style={styles.backButtonText}>◀️ Retour</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Titres likés</Text>
-          <View style={styles.placeholder} />
-        </View>
-
-        {/* Lecteur de musique */}
-        <PlayerControls
-          currentTrack={displayCurrentTrack}
-          playbackState={playback.playbackState}
+      <MainLayout
+        currentTrack={displayCurrentTrack}
+        playbackState={playback.playbackState}
+        onPlaylistPress={handleLikedTracksPress}
+        onPause={playback.pausePlayback}
+        onResume={playback.resumePlayback}
+        onNext={playback.skipToNext}
+        onPrevious={playback.skipToPrevious}
+        onToggleShuffle={playback.toggleShuffle}
+        onLogoPress={handleBackToHome}
+      >
+        <LikedTracksContent
+          currentTrack={displayCurrentTrack || null}
+          playbackState={playback.playbackState || null}
+          likedTracksInfo={likedTracks.likedTracksInfo}
+          loadingTrackId={playback.loadingTrackId}
+          loadingMore={likedTracks.loadingMore}
+          onBackPress={handleBackToHome}
           onPause={playback.pausePlayback}
           onResume={playback.resumePlayback}
           onNext={playback.skipToNext}
           onPrevious={playback.skipToPrevious}
           onToggleShuffle={playback.toggleShuffle}
           onToggleRepeat={playback.toggleRepeat}
+          onTrackPress={handleTrackPress}
+          onLoadMore={likedTracks.loadMoreTracks}
         />
-
-        {/* Liste des titres */}
-        <View style={styles.tracksSection}>
-          <Text style={styles.sectionTitle}>
-            {likedTracks.likedTracksInfo.total} titres • {likedTracks.likedTracksInfo.tracks.length} chargés
-          </Text>
-          
-          <TrackList
-            tracks={likedTracks.likedTracksInfo.tracks}
-            currentTrackId={displayCurrentTrack?.id}
-            loadingTrackId={playback.loadingTrackId}
-            isPlaying={playback.playbackState?.is_playing}
-            onTrackPress={handleTrackPress}
-            onLoadMore={likedTracks.loadMoreTracks}
-            loadingMore={likedTracks.loadingMore}
-            hasMore={likedTracks.likedTracksInfo.hasMore}
-          />
-        </View>
-
         <StatusBar style="light" />
-      </View>
+      </MainLayout>
     );
   }
 
-  // Page d'accueil
+  // Page d'accueil avec le nouveau design
   const displayCurrentTrack = playback.getDisplayCurrentTrack();
   
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🎵 Bienvenu fréro !</Text>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Déconnexion</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Lecteur de musique */}
-      <PlayerControls
-        currentTrack={displayCurrentTrack}
-        playbackState={playback.playbackState}
-        onPause={playback.pausePlayback}
-        onResume={playback.resumePlayback}
-        onNext={playback.skipToNext}
-        onPrevious={playback.skipToPrevious}
-        onToggleShuffle={playback.toggleShuffle}
-        onToggleRepeat={playback.toggleRepeat}
+    <MainLayout
+      currentTrack={displayCurrentTrack}
+      playbackState={playback.playbackState}
+      onPlaylistPress={handleLikedTracksPress}
+      onPause={playback.pausePlayback}
+      onResume={playback.resumePlayback}
+      onNext={playback.skipToNext}
+      onPrevious={playback.skipToPrevious}
+      onToggleShuffle={playback.toggleShuffle}
+      onLogoPress={() => {}}
+    >
+      <HomeContent 
+        playlists={playlists.playlistsInfo.playlists}
+        loading={playlists.loading}
+        onPlaylistPress={handlePlaylistPress}
       />
-
-      {/* Playlist des titres likés */}
-      <View style={styles.playlistsSection}>
-        <Text style={styles.sectionTitle}>Vos playlists</Text>
-        
-        <PlaylistCard
-          title="Titres likés"
-          description="Vos titres favoris sur Spotify"
-          trackCount={likedTracks.likedTracksInfo.total}
-          onPress={handleLikedTracksPress}
-        />
-      </View>
-
       <StatusBar style="light" />
-    </ScrollView>
+    </MainLayout>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
   },
   loginContainer: {
     flex: 1,
@@ -216,47 +191,39 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1DB954',
     textAlign: 'center',
     flex: 1,
   },
   subtitle: {
     fontSize: 16,
-    color: '#B3B3B3',
     textAlign: 'center',
     marginVertical: 20,
     lineHeight: 24,
   },
   loginButton: {
-    backgroundColor: '#1DB954',
     paddingHorizontal: 40,
     paddingVertical: 15,
     borderRadius: 25,
     marginTop: 20,
   },
   loginButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
   logoutButton: {
-    backgroundColor: '#333',
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 15,
   },
   logoutButtonText: {
-    color: '#B3B3B3',
     fontSize: 14,
   },
   backButton: {
-    backgroundColor: '#333',
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 15,
   },
   backButtonText: {
-    color: '#B3B3B3',
     fontSize: 14,
   },
   placeholder: {
@@ -265,7 +232,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: 'white',
     marginBottom: 15,
   },
   playlistsSection: {

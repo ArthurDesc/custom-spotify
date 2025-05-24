@@ -1,3 +1,5 @@
+import { colors } from './colors';
+
 export const formatDuration = (ms: number): string => {
   const minutes = Math.floor(ms / 60000);
   const seconds = Math.floor((ms % 60000) / 1000);
@@ -19,9 +21,9 @@ export const getRepeatColor = (repeatState?: 'off' | 'track' | 'context'): strin
   switch (repeatState) {
     case 'track':
     case 'context':
-      return '#1DB954'; // Vert quand activé
+      return colors.primary.purple; // Violet quand activé
     default:
-      return '#B3B3B3'; // Gris quand désactivé
+      return colors.text.secondary; // Gris quand désactivé
   }
 };
 

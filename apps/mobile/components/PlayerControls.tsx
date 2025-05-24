@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PlaybackState, Track } from '../types/spotify';
 import { getRepeatIcon, getRepeatColor, getRepeatLabel } from '../utils/formatters';
+import { colors } from '../utils/colors';
 
 interface PlayerControlsProps {
   currentTrack: Track | null;
@@ -39,97 +40,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     }
   };
 
-  return (
-    <View style={styles.playerSection}>
-      <Text style={styles.sectionTitle}>En cours de lecture</Text>
-      <View style={styles.playerCard}>
-        {currentTrack.album.images?.[0] && (
-          <Image 
-            source={{ uri: currentTrack.album.images[0].url }} 
-            style={styles.playerImage}
-          />
-        )}
-        <View style={styles.playerInfo}>
-          <Text style={styles.playerTrackName} numberOfLines={1}>
-            {currentTrack.name}
-          </Text>
-          <Text style={styles.playerArtistName} numberOfLines={1}>
-            {currentTrack.artists.map(a => a.name).join(', ')}
-          </Text>
-          <Text style={styles.playerAlbumName} numberOfLines={1}>
-            {currentTrack.album.name}
-          </Text>
-        </View>
-      </View>
-      
-      {/* Contrôles de lecture */}
-      <View style={styles.playerControls}>
-        <TouchableOpacity style={styles.controlButton} onPress={onPrevious}>
-          <Ionicons 
-            name="play-skip-back" 
-            size={24} 
-            color="#B3B3B3" 
-          />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.controlButton, styles.playPauseButton]} 
-          onPress={playbackState.is_playing ? onPause : onResume}
-        >
-          <Ionicons 
-            name={playbackState.is_playing ? "pause" : "play"} 
-            size={24} 
-            color="#FFFFFF" 
-          />
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.controlButton} onPress={onNext}>
-          <Ionicons 
-            name="play-skip-forward" 
-            size={24} 
-            color="#B3B3B3" 
-          />
-        </TouchableOpacity>
-      </View>
 
-      {/* Contrôles supplémentaires */}
-      <View style={styles.extraControls}>
-        <TouchableOpacity 
-          style={styles.extraControlButton} 
-          onPress={onToggleShuffle}
-        >
-          <Ionicons
-            name="shuffle"
-            size={20}
-            color={playbackState?.shuffle_state ? '#1DB954' : '#B3B3B3'}
-          />
-          <Text style={[
-            styles.extraControlLabel,
-            { color: playbackState?.shuffle_state ? '#1DB954' : '#B3B3B3' }
-          ]}>
-            Aléatoire
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.extraControlButton} 
-          onPress={onToggleRepeat}
-        >
-          <Ionicons
-            name={getRepeatIconName(playbackState?.repeat_state)}
-            size={20}
-            color={getRepeatColor(playbackState?.repeat_state)}
-          />
-          <Text style={[
-            styles.extraControlLabel,
-            { color: getRepeatColor(playbackState?.repeat_state) }
-          ]}>
-            {getRepeatLabel(playbackState?.repeat_state)}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 };
 
 const styles = StyleSheet.create({
@@ -139,12 +50,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: 'white',
     marginBottom: 15,
   },
   playerCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
     borderRadius: 10,
     padding: 15,
     alignItems: 'center',
@@ -161,17 +70,14 @@ const styles = StyleSheet.create({
   playerTrackName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'white',
     marginBottom: 5,
   },
   playerArtistName: {
     fontSize: 14,
-    color: '#B3B3B3',
     marginBottom: 5,
   },
   playerAlbumName: {
     fontSize: 12,
-    color: '#B3B3B3',
     marginBottom: 5,
   },
   playerControls: {
@@ -182,7 +88,6 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   controlButton: {
-    backgroundColor: '#333',
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 20,
@@ -190,7 +95,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   playPauseButton: {
-    backgroundColor: '#1DB954',
     paddingHorizontal: 20,
     paddingVertical: 12,
   },

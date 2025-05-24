@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { colors } from '../utils/colors';
 
 interface PlaylistCardProps {
   title: string;
@@ -16,22 +17,22 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
 }) => {
   return (
     <TouchableOpacity 
-      style={styles.playlistCard}
+      style={[styles.playlistCard, { backgroundColor: colors.background.card }]}
       onPress={onPress}
     >
-      <View style={styles.likedTracksIcon}>
+      <View style={[styles.likedTracksIcon, { backgroundColor: colors.primary.purple }]}>
         <Text style={styles.likedTracksIconText}>💚</Text>
       </View>
       <View style={styles.playlistInfo}>
-        <Text style={styles.playlistName}>{title}</Text>
-        <Text style={styles.playlistDescription}>
+        <Text style={[styles.playlistName, { color: colors.text.primary }]}>{title}</Text>
+        <Text style={[styles.playlistDescription, { color: colors.text.secondary }]}>
           {description}
         </Text>
-        <Text style={styles.playlistTracks}>
+        <Text style={[styles.playlistTracks, { color: colors.primary.purple }]}>
           {trackCount} titres
         </Text>
       </View>
-      <Text style={styles.playlistArrow}>▶️</Text>
+      <Text style={[styles.playlistArrow, { color: colors.text.secondary }]}>▶️</Text>
     </TouchableOpacity>
   );
 };
@@ -39,7 +40,6 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
 const styles = StyleSheet.create({
   playlistCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
@@ -48,7 +48,6 @@ const styles = StyleSheet.create({
   likedTracksIcon: {
     width: 60,
     height: 60,
-    backgroundColor: '#1DB954',
     borderRadius: 5,
     justifyContent: 'center',
     alignItems: 'center',
@@ -63,21 +62,17 @@ const styles = StyleSheet.create({
   playlistName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'white',
     marginBottom: 5,
   },
   playlistDescription: {
     fontSize: 12,
-    color: '#B3B3B3',
     marginBottom: 5,
   },
   playlistTracks: {
     fontSize: 12,
-    color: '#1DB954',
   },
   playlistArrow: {
     fontSize: 16,
-    color: '#B3B3B3',
     marginLeft: 10,
   },
 }); 

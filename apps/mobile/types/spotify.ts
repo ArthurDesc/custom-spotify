@@ -41,6 +41,26 @@ export interface LikedTracksInfo {
   offset: number;
 }
 
+export interface Playlist {
+  id: string;
+  name: string;
+  description: string | null;
+  images: Array<{ url: string }>;
+  tracks: {
+    total: number;
+  };
+  owner: {
+    display_name: string;
+  };
+  public: boolean;
+  snapshot_id: string;
+}
+
+export interface PlaylistsInfo {
+  total: number;
+  playlists: Playlist[];
+}
+
 export interface AuthTokens {
   access_token: string;
   refresh_token?: string;
