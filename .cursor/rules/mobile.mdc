@@ -1,0 +1,6 @@
+---
+description: Quand tu modifies quelque chose d'important la modification de la partie mobile
+globs: 
+alwaysApply: false
+---
+Quand tu modifies quelque chose d'important la modification de la partie mobile, je voudrais que tu vérifies toi meme si ça marche après avoir apporé les modifications nécessaire. Pour tu pourra lancer npx expo start dans apps/mobile. 

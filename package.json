@@ -20,10 +20,12 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/react-native": "^0.72.8",
     "copyfiles": "^2.4.1",
     "prettier": "latest",
     "prisma": "^6.8.2",
     "rimraf": "^6.0.1",
+    "tailwindcss": "^4.1.7",
     "ts-node": "^10.9.2",
     "turbo": "latest",
     "typescript": "latest"

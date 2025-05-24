@@ -15,8 +15,11 @@ alwaysApply: true
   - CI/CD via GitHub Actions, caching TurboRepo activé  
   - Versioning sémantique avec Changesets  
 
+Le backend est hebergé sur Render, pour voir un changement backend il faut donc faire un git push sur la branche main.
 
+- Tu ne dois jamais lancer les serveurs de développement sauf si je te dis de le faire. La plupart du temps ils sont déjà lancés
 
+- Les commandes mobile sont à executés dans apps/mobile et non à la racine
 
 
 
