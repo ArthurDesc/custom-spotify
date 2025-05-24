@@ -8,6 +8,9 @@
     },
     "src/app/api/spotify-token/route.ts": {
       "maxDuration": 30
+    },
+    "src/app/api/public/spotify/route.ts": {
+      "maxDuration": 30
     }
   },
   "headers": [
@@ -47,6 +50,23 @@
     },
     {
       "source": "/api/spotify-token",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type"
+        }
+      ]
+    },
+    {
+      "source": "/api/public/spotify",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
