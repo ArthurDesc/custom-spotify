@@ -28,10 +28,39 @@ interface Playlist {
   tracks: { total: number };
 }
 
+interface Track {
+  id: string;
+  name: string;
+  artists: Array<{ name: string }>;
+  album: {
+    name: string;
+    images: Array<{ url: string }>;
+  };
+  duration_ms: number;
+  preview_url: string | null;
+  uri: string;
+}
+
+interface PlaybackState {
+  is_playing: boolean;
+  item: Track | null;
+  progress_ms: number;
+  device: {
+    id: string;
+    name: string;
+    type: string;
+    volume_percent: number;
+  } | null;
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [profile, setProfile] = useState<SpotifyProfile | null>(null);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [playlistTracks, setPlaylistTracks] = useState<Track[]>([]);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [playbackState, setPlaybackState] = useState<PlaybackState | null>(null);
   const [loading, setLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
@@ -153,11 +182,159 @@ export default function App() {
         const playlistsData = await playlistsResponse.json();
         setPlaylists(playlistsData.items);
       }
+
+      // Récupérer l'état de lecture actuel
+      await fetchPlaybackState(token);
     } catch (error) {
       console.error('Erreur fetch data:', error);
       Alert.alert('Erreur', 'Impossible de récupérer les données utilisateur');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPlaylistTracks = async (playlistId: string) => {
+    if (!accessToken) return;
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const tracks = data.items.map((item: any) => item.track).filter((track: any) => track);
+        setPlaylistTracks(tracks);
+      }
+    } catch (error) {
+      console.error('Erreur fetch tracks:', error);
+      Alert.alert('Erreur', 'Impossible de récupérer les pistes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPlaybackState = async (token: string) => {
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok && response.status !== 204) {
+        const data = await response.json();
+        setPlaybackState(data);
+        setCurrentTrack(data.item);
+      }
+    } catch (error) {
+      console.error('Erreur fetch playback:', error);
+    }
+  };
+
+  const playTrack = async (trackUri: string) => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uris: [trackUri]
+        }),
+      });
+      
+      if (response.ok || response.status === 204) {
+        // Attendre un peu puis récupérer le nouvel état
+        setTimeout(() => fetchPlaybackState(accessToken), 1000);
+      } else {
+        Alert.alert('Erreur', 'Impossible de lire cette piste. Assurez-vous qu\'un appareil Spotify est actif.');
+      }
+    } catch (error) {
+      console.error('Erreur play track:', error);
+      Alert.alert('Erreur', 'Problème lors de la lecture');
+    }
+  };
+
+  const pausePlayback = async () => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player/pause', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (response.ok || response.status === 204) {
+        setTimeout(() => fetchPlaybackState(accessToken), 500);
+      }
+    } catch (error) {
+      console.error('Erreur pause:', error);
+    }
+  };
+
+  const resumePlayback = async () => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (response.ok || response.status === 204) {
+        setTimeout(() => fetchPlaybackState(accessToken), 500);
+      }
+    } catch (error) {
+      console.error('Erreur resume:', error);
+    }
+  };
+
+  const skipToNext = async () => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player/next', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (response.ok || response.status === 204) {
+        setTimeout(() => fetchPlaybackState(accessToken), 1000);
+      }
+    } catch (error) {
+      console.error('Erreur skip:', error);
+    }
+  };
+
+  const skipToPrevious = async () => {
+    if (!accessToken) return;
+    
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player/previous', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (response.ok || response.status === 204) {
+        setTimeout(() => fetchPlaybackState(accessToken), 1000);
+      }
+    } catch (error) {
+      console.error('Erreur previous:', error);
     }
   };
 
@@ -169,6 +346,26 @@ export default function App() {
     setIsAuthenticated(false);
     setProfile(null);
     setPlaylists([]);
+    setSelectedPlaylist(null);
+    setPlaylistTracks([]);
+    setCurrentTrack(null);
+    setPlaybackState(null);
+  };
+
+  const handlePlaylistSelect = (playlist: Playlist) => {
+    setSelectedPlaylist(playlist);
+    fetchPlaylistTracks(playlist.id);
+  };
+
+  const handleBackToPlaylists = () => {
+    setSelectedPlaylist(null);
+    setPlaylistTracks([]);
+  };
+
+  const formatDuration = (ms: number) => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   if (loading) {
@@ -184,20 +381,11 @@ export default function App() {
     return (
       <View style={styles.container}>
         <View style={styles.loginContainer}>
-          <Text style={styles.title}>🎵 Custom Spotify</Text>
+          <Text style={styles.title}>🎵 Bienvenu fréro ! </Text>
           <Text style={styles.subtitle}>
             Connectez-vous avec votre compte Spotify pour accéder à vos données
           </Text>
-          
-          {/* Debug: Afficher l'URL de redirection */}
-          <TouchableOpacity 
-            style={styles.debugButton}
-            onPress={() => Alert.alert('URL de redirection', redirectUri)}
-          >
-            <Text style={styles.debugButtonText}>
-              🔍 Voir URL de redirection
-            </Text>
-          </TouchableOpacity>
+
           
           <TouchableOpacity 
             style={styles.loginButton}
@@ -217,7 +405,7 @@ export default function App() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>🎵 Custom Spotify</Text>
+        <Text style={styles.title}>🎵 Bienvenu fréro !</Text>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Déconnexion</Text>
         </TouchableOpacity>
@@ -244,28 +432,131 @@ export default function App() {
         </View>
       )}
 
-      <View style={styles.playlistsSection}>
-        <Text style={styles.sectionTitle}>Mes Playlists ({playlists.length})</Text>
-        {playlists.map((playlist) => (
-          <View key={playlist.id} style={styles.playlistCard}>
-            {playlist.images?.[0] && (
+      {/* Lecteur de musique actuel */}
+      {currentTrack && playbackState && (
+        <View style={styles.playerSection}>
+          <Text style={styles.sectionTitle}>En cours de lecture</Text>
+          <View style={styles.playerCard}>
+            {currentTrack.album.images?.[0] && (
               <Image 
-                source={{ uri: playlist.images[0].url }} 
-                style={styles.playlistImage}
+                source={{ uri: currentTrack.album.images[0].url }} 
+                style={styles.playerImage}
               />
             )}
-            <View style={styles.playlistInfo}>
-              <Text style={styles.playlistName}>{playlist.name}</Text>
-              <Text style={styles.playlistDescription} numberOfLines={2}>
-                {playlist.description || 'Aucune description'}
+            <View style={styles.playerInfo}>
+              <Text style={styles.playerTrackName} numberOfLines={1}>
+                {currentTrack.name}
               </Text>
-              <Text style={styles.playlistTracks}>
-                {playlist.tracks?.total} pistes
+              <Text style={styles.playerArtistName} numberOfLines={1}>
+                {currentTrack.artists.map(a => a.name).join(', ')}
+              </Text>
+              <Text style={styles.playerAlbumName} numberOfLines={1}>
+                {currentTrack.album.name}
               </Text>
             </View>
           </View>
-        ))}
-      </View>
+          
+          {/* Contrôles de lecture */}
+          <View style={styles.playerControls}>
+            <TouchableOpacity style={styles.controlButton} onPress={skipToPrevious}>
+              <Text style={styles.controlButtonText}>⏮️</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.controlButton, styles.playPauseButton]} 
+              onPress={playbackState.is_playing ? pausePlayback : resumePlayback}
+            >
+              <Text style={styles.controlButtonText}>
+                {playbackState.is_playing ? '⏸️' : '▶️'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.controlButton} onPress={skipToNext}>
+              <Text style={styles.controlButtonText}>⏭️</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Navigation: Playlists ou Tracks */}
+      {!selectedPlaylist ? (
+        <View style={styles.playlistsSection}>
+          <Text style={styles.sectionTitle}>Mes Playlists ({playlists.length})</Text>
+          {playlists.map((playlist) => (
+            <TouchableOpacity 
+              key={playlist.id} 
+              style={styles.playlistCard}
+              onPress={() => handlePlaylistSelect(playlist)}
+            >
+              {playlist.images?.[0] && (
+                <Image 
+                  source={{ uri: playlist.images[0].url }} 
+                  style={styles.playlistImage}
+                />
+              )}
+              <View style={styles.playlistInfo}>
+                <Text style={styles.playlistName}>{playlist.name}</Text>
+                <Text style={styles.playlistDescription} numberOfLines={2}>
+                  {playlist.description || 'Aucune description'}
+                </Text>
+                <Text style={styles.playlistTracks}>
+                  {playlist.tracks?.total} pistes
+                </Text>
+              </View>
+              <Text style={styles.playlistArrow}>▶️</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.tracksSection}>
+          <View style={styles.tracksHeader}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBackToPlaylists}>
+              <Text style={styles.backButtonText}>◀️ Retour</Text>
+            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>{selectedPlaylist.name}</Text>
+          </View>
+          
+          {playlistTracks.map((track, index) => (
+            <TouchableOpacity 
+              key={track.id} 
+              style={[
+                styles.trackCard,
+                currentTrack?.id === track.id && styles.currentTrackCard
+              ]}
+              onPress={() => playTrack(track.uri)}
+            >
+              {track.album.images?.[0] && (
+                <Image 
+                  source={{ uri: track.album.images[0].url }} 
+                  style={styles.trackImage}
+                />
+              )}
+              <View style={styles.trackInfo}>
+                <Text style={[
+                  styles.trackName,
+                  currentTrack?.id === track.id && styles.currentTrackText
+                ]} numberOfLines={1}>
+                  {track.name}
+                </Text>
+                <Text style={styles.trackArtist} numberOfLines={1}>
+                  {track.artists.map(a => a.name).join(', ')}
+                </Text>
+                <Text style={styles.trackAlbum} numberOfLines={1}>
+                  {track.album.name}
+                </Text>
+              </View>
+              <View style={styles.trackMeta}>
+                <Text style={styles.trackDuration}>
+                  {formatDuration(track.duration_ms)}
+                </Text>
+                {currentTrack?.id === track.id && playbackState?.is_playing && (
+                  <Text style={styles.playingIndicator}>🎵</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <StatusBar style="light" />
     </ScrollView>
@@ -404,6 +695,135 @@ const styles = StyleSheet.create({
   playlistTracks: {
     fontSize: 12,
     color: '#1DB954',
+  },
+  playlistArrow: {
+    fontSize: 16,
+    color: '#B3B3B3',
+    marginLeft: 10,
+  },
+  playerSection: {
+    padding: 20,
+  },
+  playerCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+  },
+  playerImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 15,
+  },
+  playerInfo: {
+    flex: 1,
+  },
+  playerTrackName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  playerArtistName: {
+    fontSize: 14,
+    color: '#B3B3B3',
+    marginBottom: 5,
+  },
+  playerAlbumName: {
+    fontSize: 12,
+    color: '#B3B3B3',
+    marginBottom: 5,
+  },
+  playerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  controlButton: {
+    backgroundColor: '#333',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  controlButtonText: {
+    color: '#B3B3B3',
+    fontSize: 14,
+  },
+  playPauseButton: {
+    backgroundColor: '#1DB954',
+  },
+  tracksSection: {
+    padding: 20,
+  },
+  tracksHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  backButton: {
+    backgroundColor: '#333',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+  },
+  backButtonText: {
+    color: '#B3B3B3',
+    fontSize: 14,
+  },
+  trackCard: {
+    flexDirection: 'row',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  currentTrackCard: {
+    backgroundColor: '#333',
+  },
+  trackImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 5,
+    marginRight: 15,
+  },
+  trackInfo: {
+    flex: 1,
+  },
+  trackName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 5,
+  },
+  currentTrackText: {
+    color: '#1DB954',
+  },
+  trackArtist: {
+    fontSize: 14,
+    color: '#B3B3B3',
+    marginBottom: 5,
+  },
+  trackAlbum: {
+    fontSize: 12,
+    color: '#B3B3B3',
+    marginBottom: 5,
+  },
+  trackMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  trackDuration: {
+    fontSize: 12,
+    color: '#B3B3B3',
+  },
+  playingIndicator: {
+    fontSize: 16,
+    color: '#1DB954',
+    marginLeft: 10,
   },
   debugButton: {
     backgroundColor: '#333',
