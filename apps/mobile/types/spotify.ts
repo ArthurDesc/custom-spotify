@@ -72,4 +72,54 @@ export interface AuthTokens {
   access_token: string;
   refresh_token?: string;
   expires_in?: number;
+}
+
+export interface Artist {
+  id: string;
+  name: string;
+  images: Array<{ url: string }>;
+  followers: { total: number };
+  genres: string[];
+  popularity: number;
+  uri: string;
+}
+
+export interface Album {
+  id: string;
+  name: string;
+  artists: Array<{ id: string; name: string }>;
+  images: Array<{ url: string }>;
+  release_date: string;
+  total_tracks: number;
+  uri: string;
+  album_type: 'album' | 'single' | 'compilation';
+}
+
+export interface SearchResults {
+  artists?: {
+    items: Artist[];
+    total: number;
+  };
+  albums?: {
+    items: Album[];
+    total: number;
+  };
+  tracks?: {
+    items: Track[];
+    total: number;
+  };
+}
+
+export interface ArtistAlbumsInfo {
+  albums: Album[];
+  hasMore: boolean;
+  offset: number;
+  total: number;
+}
+
+export interface AlbumTracksInfo {
+  album: Album;
+  tracks: Track[];
+  hasMore: boolean;
+  offset: number;
 } 

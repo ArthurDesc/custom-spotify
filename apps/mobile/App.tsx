@@ -10,6 +10,7 @@ import { useLikedTracks } from './hooks/useLikedTracks';
 import { usePlayback } from './hooks/usePlayback';
 import { usePlaylists } from './hooks/usePlaylists';
 import { usePlaylistDetail } from './hooks/usePlaylistDetail';
+import { useSearch } from './hooks/useSearch';
 
 // Composants
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -22,7 +23,7 @@ import { AnimatedBackground } from './components/AnimatedBackground';
 import SpotifyRemoteTest from './components/SpotifyRemoteTest';
 
 // Types
-import { Playlist } from './types/spotify';
+import { Playlist, Track } from './types/spotify';
 
 // Couleurs
 import { colors } from './utils/colors';
@@ -40,6 +41,7 @@ export default function App() {
   const playback = usePlayback();
   const playlists = usePlaylists();
   const playlistDetail = usePlaylistDetail();
+  const search = useSearch();
 
   // Initialiser les données après authentification
   useEffect(() => {
@@ -90,8 +92,11 @@ export default function App() {
     setShowRemoteTest(false);
   };
 
-  const handleTrackPress = (trackUri: string) => {
-    if (selectedPlaylist && playlistDetail.playlistDetailInfo) {
+  const handleTrackPress = (trackUri: string, tracks?: Track[]) => {
+    if (tracks) {
+      // Jouer depuis la liste fournie (recherche, etc.)
+      playback.playTrack(trackUri, tracks);
+    } else if (selectedPlaylist && playlistDetail.playlistDetailInfo) {
       // Jouer depuis la playlist
       playback.playTrack(trackUri, playlistDetail.playlistDetailInfo.tracks);
     } else {
@@ -179,6 +184,8 @@ export default function App() {
           console.log('Volume change:', volume);
         }}
         onLogoPress={handleBackToHome}
+        onSearchPress={() => {}}
+        onTrackPress={handleTrackPress}
         playbackMethod={playback.getPlaybackMethod()}
       >
         <LikedTracksContent
@@ -194,7 +201,7 @@ export default function App() {
           onPrevious={playback.skipToPrevious}
           onToggleShuffle={playback.toggleShuffle}
           onToggleRepeat={playback.toggleRepeat}
-          onTrackPress={handleTrackPress}
+          onTrackPress={(trackUri) => handleTrackPress(trackUri)}
           onLoadMore={likedTracks.loadMoreTracks}
         />
         <StatusBar style="light" />
@@ -226,6 +233,8 @@ export default function App() {
           console.log('Volume change:', volume);
         }}
         onLogoPress={handleBackToHome}
+        onSearchPress={() => {}}
+        onTrackPress={handleTrackPress}
         playbackMethod={playback.getPlaybackMethod()}
       >
         <PlaylistDetailContent
@@ -241,7 +250,7 @@ export default function App() {
           onPrevious={playback.skipToPrevious}
           onToggleShuffle={playback.toggleShuffle}
           onToggleRepeat={playback.toggleRepeat}
-          onTrackPress={handleTrackPress}
+          onTrackPress={(trackUri) => handleTrackPress(trackUri)}
           onLoadMore={playlistDetail.loadMoreTracks}
         />
         <StatusBar style="light" />
@@ -294,6 +303,8 @@ export default function App() {
         console.log('Volume change:', volume);
       }}
       onLogoPress={() => {}}
+      onSearchPress={() => {}}
+      onTrackPress={handleTrackPress}
       playbackMethod={playback.getPlaybackMethod()}
     >
       <HomeContent 
