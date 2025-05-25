@@ -208,6 +208,34 @@ class SpotifyService {
       throw new Error('Failed to set repeat');
     }
   }
+
+  // Détails d'une playlist
+  async getPlaylist(playlistId: string): Promise<any> {
+    if (!this.accessToken) throw new Error('No access token');
+
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
+      },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch playlist');
+    return response.json();
+  }
+
+  // Tracks d'une playlist
+  async getPlaylistTracks(playlistId: string, offset: number = 0, limit: number = 50): Promise<any> {
+    if (!this.accessToken) throw new Error('No access token');
+
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`, {
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
+      },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch playlist tracks');
+    return response.json();
+  }
 }
 
 // Instance singleton

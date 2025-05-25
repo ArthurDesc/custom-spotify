@@ -9,6 +9,7 @@ import { useSpotifyAuth } from './hooks/useSpotifyAuth';
 import { useLikedTracks } from './hooks/useLikedTracks';
 import { usePlayback } from './hooks/usePlayback';
 import { usePlaylists } from './hooks/usePlaylists';
+import { usePlaylistDetail } from './hooks/usePlaylistDetail';
 
 // Composants
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -16,7 +17,11 @@ import { MusicPlayerCard } from './components/MusicPlayerCard';
 import { MainLayout } from './components/MainLayout';
 import { HomeContent } from './components/HomeContent';
 import { LikedTracksContent } from './components/LikedTracksContent';
+import { PlaylistDetailContent } from './components/PlaylistDetailContent';
 import { AnimatedBackground } from './components/AnimatedBackground';
+
+// Types
+import { Playlist } from './types/spotify';
 
 // Couleurs
 import { colors } from './utils/colors';
@@ -25,12 +30,14 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function App() {
   const [showLikedTracks, setShowLikedTracks] = useState(false);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
 
   // Hooks personnalisés
   const auth = useSpotifyAuth();
   const likedTracks = useLikedTracks();
   const playback = usePlayback();
   const playlists = usePlaylists();
+  const playlistDetail = usePlaylistDetail();
 
   // Initialiser les données après authentification
   useEffect(() => {
@@ -54,10 +61,13 @@ export default function App() {
 
   const handleLikedTracksPress = () => {
     setShowLikedTracks(true);
+    setSelectedPlaylist(null);
   };
 
   const handleBackToHome = () => {
     setShowLikedTracks(false);
+    setSelectedPlaylist(null);
+    playlistDetail.reset();
   };
 
   const handleLogout = () => {
@@ -65,16 +75,26 @@ export default function App() {
     likedTracks.reset();
     playback.reset();
     playlists.reset();
+    playlistDetail.reset();
     setShowLikedTracks(false);
+    setSelectedPlaylist(null);
   };
 
   const handleTrackPress = (trackUri: string) => {
-    playback.playTrack(trackUri, likedTracks.likedTracksInfo.tracks);
+    if (selectedPlaylist && playlistDetail.playlistDetailInfo) {
+      // Jouer depuis la playlist
+      playback.playTrack(trackUri, playlistDetail.playlistDetailInfo.tracks);
+    } else {
+      // Jouer depuis les titres likés
+      playback.playTrack(trackUri, likedTracks.likedTracksInfo.tracks);
+    }
   };
 
-  const handlePlaylistPress = (playlist: any) => {
-    // TODO: Implémenter la navigation vers la playlist
-    console.log('Playlist sélectionnée:', playlist.name);
+  const handlePlaylistPress = async (playlist: Playlist) => {
+    setSelectedPlaylist(playlist);
+    setShowLikedTracks(false);
+    // Charger les tracks de la playlist
+    await playlistDetail.fetchPlaylistTracks(playlist.id, 0, true);
   };
 
   // Écran de chargement
@@ -83,6 +103,22 @@ export default function App() {
       <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
         <AnimatedBackground />
         <LoadingSpinner />
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+
+  // Écran de chargement pour playlist
+  if (selectedPlaylist && (playlistDetail.loading || !playlistDetail.playlistDetailInfo)) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+        <AnimatedBackground />
+        <View style={styles.loadingContainer}>
+          <LoadingSpinner />
+          <Text style={[styles.loadingText, { color: colors.text.primary }]}>
+            Chargement de "{selectedPlaylist.name}"...
+          </Text>
+        </View>
         <StatusBar style="light" />
       </View>
     );
@@ -149,6 +185,52 @@ export default function App() {
           onToggleRepeat={playback.toggleRepeat}
           onTrackPress={handleTrackPress}
           onLoadMore={likedTracks.loadMoreTracks}
+        />
+        <StatusBar style="light" />
+      </MainLayout>
+    );
+  }
+
+  // Vue détaillée d'une playlist
+  if (selectedPlaylist && playlistDetail.playlistDetailInfo) {
+    const displayCurrentTrack = playback.getDisplayCurrentTrack();
+    
+    return (
+      <MainLayout
+        currentTrack={displayCurrentTrack}
+        playbackState={playback.playbackState}
+        onPlaylistPress={handleLikedTracksPress}
+        onPause={playback.pausePlayback}
+        onResume={playback.resumePlayback}
+        onNext={playback.skipToNext}
+        onPrevious={playback.skipToPrevious}
+        onToggleShuffle={playback.toggleShuffle}
+        onToggleRepeat={playback.toggleRepeat}
+        onSeek={(position) => {
+          // TODO: Implémenter la fonction seek dans usePlayback
+          console.log('Seek to position:', position);
+        }}
+        onVolumeChange={(volume) => {
+          // TODO: Implémenter la fonction setVolume dans usePlayback
+          console.log('Volume change:', volume);
+        }}
+        onLogoPress={handleBackToHome}
+      >
+        <PlaylistDetailContent
+          currentTrack={displayCurrentTrack || null}
+          playbackState={playback.playbackState || null}
+          playlistDetailInfo={playlistDetail.playlistDetailInfo}
+          loadingTrackId={playback.loadingTrackId}
+          loadingMore={playlistDetail.loadingMore}
+          onBackPress={handleBackToHome}
+          onPause={playback.pausePlayback}
+          onResume={playback.resumePlayback}
+          onNext={playback.skipToNext}
+          onPrevious={playback.skipToPrevious}
+          onToggleShuffle={playback.toggleShuffle}
+          onToggleRepeat={playback.toggleRepeat}
+          onTrackPress={handleTrackPress}
+          onLoadMore={playlistDetail.loadMoreTracks}
         />
         <StatusBar style="light" />
       </MainLayout>
@@ -258,5 +340,15 @@ const styles = StyleSheet.create({
   tracksSection: {
     flex: 1,
     padding: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 20,
   },
 });

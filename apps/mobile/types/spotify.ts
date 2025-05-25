@@ -61,6 +61,13 @@ export interface PlaylistsInfo {
   playlists: Playlist[];
 }
 
+export interface PlaylistDetailInfo {
+  playlist: Playlist;
+  tracks: Track[];
+  hasMore: boolean;
+  offset: number;
+}
+
 export interface AuthTokens {
   access_token: string;
   refresh_token?: string;
