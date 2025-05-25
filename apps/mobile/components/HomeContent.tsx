@@ -9,6 +9,7 @@ interface HomeContentProps {
   loading: boolean;
   onPlaylistPress: (playlist: Playlist) => void;
   onMainPlaylistPress: () => void;
+  onRemoteTestPress?: () => void;
 }
 
 export const HomeContent: React.FC<HomeContentProps> = ({
@@ -16,6 +17,7 @@ export const HomeContent: React.FC<HomeContentProps> = ({
   loading,
   onPlaylistPress,
   onMainPlaylistPress,
+  onRemoteTestPress,
 }) => {
   return (
     <ScrollView 
@@ -27,7 +29,7 @@ export const HomeContent: React.FC<HomeContentProps> = ({
       <View className="items-center mb-6">
         <TouchableOpacity 
           onPress={onMainPlaylistPress}
-          className="bg-background-card px-6 py-3 rounded-full flex-row items-center"
+          className="bg-background-card px-6 py-3 rounded-full flex-row items-center mb-3"
           style={{ backgroundColor: colors.background.card }}
         >
           <Ionicons 
@@ -43,6 +45,28 @@ export const HomeContent: React.FC<HomeContentProps> = ({
             Playlist principal
           </Text>
         </TouchableOpacity>
+
+        {/* Bouton Remote Test */}
+        {onRemoteTestPress && (
+          <TouchableOpacity 
+            onPress={onRemoteTestPress}
+            className="bg-background-card px-6 py-3 rounded-full flex-row items-center"
+            style={{ backgroundColor: colors.primary.purple }}
+          >
+            <Ionicons 
+              name="radio" 
+              size={20} 
+              color={colors.text.primary} 
+              style={{ marginRight: 8 }}
+            />
+            <Text 
+              className="text-text-primary font-semibold text-base"
+              style={{ color: colors.text.primary }}
+            >
+              Test Remote SDK
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Section "Mes playlists" */}

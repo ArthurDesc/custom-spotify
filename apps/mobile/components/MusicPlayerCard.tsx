@@ -16,6 +16,7 @@ interface MusicPlayerCardProps {
   onToggleShuffle: () => void;
   onTrackPress?: () => void;
   isInLayout?: boolean;
+  playbackMethod?: string;
 }
 
 export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
@@ -29,6 +30,7 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
   onToggleShuffle,
   onTrackPress,
   isInLayout = false,
+  playbackMethod,
 }) => {
   const isPlaying = playbackState?.is_playing || false;
   const isShuffled = playbackState?.shuffle_state || false;
@@ -95,13 +97,32 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
                 >
                   {currentTrack.name}
                 </Text>
-                <Text 
-                  className="text-text-secondary text-xs"
-                  style={{ color: colors.text.secondary }}
-                  numberOfLines={1}
-                >
-                  {currentTrack.artists.map(artist => artist.name).join(', ')}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text 
+                    className="text-text-secondary text-xs"
+                    style={{ color: colors.text.secondary }}
+                    numberOfLines={1}
+                  >
+                    {currentTrack.artists.map(artist => artist.name).join(', ')}
+                  </Text>
+                  {playbackMethod && (
+                    <View style={{ 
+                      marginLeft: 6, 
+                      paddingHorizontal: 4, 
+                      paddingVertical: 1, 
+                      backgroundColor: playbackMethod === 'Remote SDK' ? 'rgba(139, 69, 255, 0.2)' : 'rgba(75, 85, 99, 0.3)',
+                      borderRadius: 4 
+                    }}>
+                      <Text style={{ 
+                        fontSize: 8, 
+                        color: playbackMethod === 'Remote SDK' ? colors.primary.purple : colors.text.secondary,
+                        fontWeight: '600'
+                      }}>
+                        {playbackMethod === 'Remote SDK' ? '🎵 Remote' : '🌐 Web'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
 
               {/* Contrôles de lecture */}

@@ -19,6 +19,7 @@ import { HomeContent } from './components/HomeContent';
 import { LikedTracksContent } from './components/LikedTracksContent';
 import { PlaylistDetailContent } from './components/PlaylistDetailContent';
 import { AnimatedBackground } from './components/AnimatedBackground';
+import SpotifyRemoteTest from './components/SpotifyRemoteTest';
 
 // Types
 import { Playlist } from './types/spotify';
@@ -31,6 +32,7 @@ WebBrowser.maybeCompleteAuthSession();
 export default function App() {
   const [showLikedTracks, setShowLikedTracks] = useState(false);
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  const [showRemoteTest, setShowRemoteTest] = useState(false);
 
   // Hooks personnalisés
   const auth = useSpotifyAuth();
@@ -67,7 +69,14 @@ export default function App() {
   const handleBackToHome = () => {
     setShowLikedTracks(false);
     setSelectedPlaylist(null);
+    setShowRemoteTest(false);
     playlistDetail.reset();
+  };
+
+  const handleRemoteTestPress = () => {
+    setShowRemoteTest(true);
+    setShowLikedTracks(false);
+    setSelectedPlaylist(null);
   };
 
   const handleLogout = () => {
@@ -78,6 +87,7 @@ export default function App() {
     playlistDetail.reset();
     setShowLikedTracks(false);
     setSelectedPlaylist(null);
+    setShowRemoteTest(false);
   };
 
   const handleTrackPress = (trackUri: string) => {
@@ -169,6 +179,7 @@ export default function App() {
           console.log('Volume change:', volume);
         }}
         onLogoPress={handleBackToHome}
+        playbackMethod={playback.getPlaybackMethod()}
       >
         <LikedTracksContent
           currentTrack={displayCurrentTrack || null}
@@ -215,6 +226,7 @@ export default function App() {
           console.log('Volume change:', volume);
         }}
         onLogoPress={handleBackToHome}
+        playbackMethod={playback.getPlaybackMethod()}
       >
         <PlaylistDetailContent
           currentTrack={displayCurrentTrack || null}
@@ -234,6 +246,28 @@ export default function App() {
         />
         <StatusBar style="light" />
       </MainLayout>
+    );
+  }
+
+  // Test du Remote SDK
+  if (showRemoteTest) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+        <AnimatedBackground />
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={[styles.backButton, { backgroundColor: colors.primary.purple }]}
+            onPress={handleBackToHome}
+          >
+            <Text style={[styles.backButtonText, { color: colors.text.primary }]}>
+              ← Retour
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.placeholder} />
+        </View>
+        <SpotifyRemoteTest />
+        <StatusBar style="light" />
+      </View>
     );
   }
 
@@ -260,12 +294,14 @@ export default function App() {
         console.log('Volume change:', volume);
       }}
       onLogoPress={() => {}}
+      playbackMethod={playback.getPlaybackMethod()}
     >
       <HomeContent 
         playlists={playlists.playlistsInfo.playlists}
         loading={playlists.loading}
         onPlaylistPress={handlePlaylistPress}
         onMainPlaylistPress={handleLikedTracksPress}
+        onRemoteTestPress={handleRemoteTestPress}
       />
       <StatusBar style="light" />
     </MainLayout>

@@ -20,6 +20,7 @@ interface MainLayoutProps {
   onVolumeChange?: (volume: number) => void;
   onLogoPress?: () => void;
   showMusicPlayer?: boolean;
+  playbackMethod?: string;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
@@ -37,6 +38,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onVolumeChange,
   onLogoPress,
   showMusicPlayer = true,
+  playbackMethod,
 }) => {
   return (
     <SafeAreaView 
@@ -76,6 +78,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           onSeek={onSeek}
           onVolumeChange={onVolumeChange}
           isInLayout={true}
+          playbackMethod={playbackMethod}
         />
       )}
     </SafeAreaView>

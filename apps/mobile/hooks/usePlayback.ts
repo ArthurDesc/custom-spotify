@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { PlaybackState, Track } from '../types/spotify';
 import spotifyService from '../services/spotifyService';
+import spotifyRemoteService from '../services/spotifyRemoteService';
 
 export const usePlayback = () => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -39,6 +40,27 @@ export const usePlayback = () => {
       setOptimisticCurrentTrack(selectedTrack);
       setLoadingTrackId(selectedTrack.id);
 
+      // 🎵 PRIORITÉ AU REMOTE SDK : Essayer d'abord le Remote SDK
+      if (spotifyRemoteService.isRemoteConnected()) {
+        console.log('🎵 Utilisation du Remote SDK pour la lecture');
+        try {
+          await spotifyRemoteService.playTrack(trackUri);
+          console.log('✅ Lecture lancée via Remote SDK');
+          
+          // Mettre à jour l'état local
+          setTimeout(() => {
+            setLoadingTrackId(null);
+            // Pas besoin de fetchPlaybackState car le Remote SDK gère la lecture
+          }, 500);
+          return;
+        } catch (remoteError) {
+          console.warn('⚠️ Remote SDK échoué, fallback vers API Web:', remoteError);
+        }
+      }
+
+      // 🌐 FALLBACK API WEB : Si Remote SDK non disponible ou échoué
+      console.log('🌐 Utilisation de l\'API Web pour la lecture');
+      
       // Sauvegarder l'état shuffle actuel
       const wasShuffleOn = playbackState?.shuffle_state || false;
       
@@ -71,12 +93,19 @@ export const usePlayback = () => {
       // En cas d'erreur, annuler l'optimistic update
       setOptimisticCurrentTrack(null);
       setLoadingTrackId(null);
-      Alert.alert('Erreur', 'Problème lors de la lecture');
+      Alert.alert('Erreur', 'Problème lors de la lecture. Assurez-vous que Spotify est ouvert et qu\'un appareil est actif.');
     }
   };
 
   const pausePlayback = async () => {
     try {
+      // Priorité au Remote SDK
+      if (spotifyRemoteService.isRemoteConnected()) {
+        await spotifyRemoteService.pausePlayback();
+        return;
+      }
+      
+      // Fallback API Web
       await spotifyService.pausePlayback();
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
@@ -86,6 +115,13 @@ export const usePlayback = () => {
 
   const resumePlayback = async () => {
     try {
+      // Priorité au Remote SDK
+      if (spotifyRemoteService.isRemoteConnected()) {
+        await spotifyRemoteService.resumePlayback();
+        return;
+      }
+      
+      // Fallback API Web
       await spotifyService.resumePlayback();
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
@@ -95,6 +131,13 @@ export const usePlayback = () => {
 
   const skipToNext = async () => {
     try {
+      // Priorité au Remote SDK
+      if (spotifyRemoteService.isRemoteConnected()) {
+        await spotifyRemoteService.skipToNext();
+        return;
+      }
+      
+      // Fallback API Web
       await spotifyService.skipToNext();
       setTimeout(() => fetchPlaybackState(), 1000);
     } catch (error) {
@@ -104,6 +147,13 @@ export const usePlayback = () => {
 
   const skipToPrevious = async () => {
     try {
+      // Priorité au Remote SDK
+      if (spotifyRemoteService.isRemoteConnected()) {
+        await spotifyRemoteService.skipToPrevious();
+        return;
+      }
+      
+      // Fallback API Web
       await spotifyService.skipToPrevious();
       setTimeout(() => fetchPlaybackState(), 1000);
     } catch (error) {
@@ -116,6 +166,14 @@ export const usePlayback = () => {
     
     try {
       const newShuffleState = !playbackState.shuffle_state;
+      
+      // Priorité au Remote SDK
+      if (spotifyRemoteService.isRemoteConnected()) {
+        await spotifyRemoteService.setShuffle(newShuffleState);
+        return;
+      }
+      
+      // Fallback API Web
       await spotifyService.setShuffle(newShuffleState);
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
@@ -143,6 +201,13 @@ export const usePlayback = () => {
           newRepeatState = 'off';
       }
       
+      // Priorité au Remote SDK
+      if (spotifyRemoteService.isRemoteConnected()) {
+        await spotifyRemoteService.setRepeat(newRepeatState);
+        return;
+      }
+      
+      // Fallback API Web
       await spotifyService.setRepeat(newRepeatState);
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
@@ -162,6 +227,11 @@ export const usePlayback = () => {
     setPlaybackState(null);
   };
 
+  // Nouvelle fonction pour vérifier le statut du Remote SDK
+  const getPlaybackMethod = () => {
+    return spotifyRemoteService.isRemoteConnected() ? 'Remote SDK' : 'API Web';
+  };
+
   return {
     currentTrack,
     optimisticCurrentTrack,
@@ -176,6 +246,7 @@ export const usePlayback = () => {
     toggleShuffle,
     toggleRepeat,
     getDisplayCurrentTrack,
+    getPlaybackMethod,
     reset
   };
 }; 

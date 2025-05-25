@@ -16,6 +16,7 @@ interface MusicPlayerWithModalProps {
   onSeek?: (position: number) => void;
   onVolumeChange?: (volume: number) => void;
   isInLayout?: boolean;
+  playbackMethod?: string;
 }
 
 export const MusicPlayerWithModal: React.FC<MusicPlayerWithModalProps> = ({
@@ -31,6 +32,7 @@ export const MusicPlayerWithModal: React.FC<MusicPlayerWithModalProps> = ({
   onSeek,
   onVolumeChange,
   isInLayout = false,
+  playbackMethod,
 }) => {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
@@ -65,6 +67,7 @@ export const MusicPlayerWithModal: React.FC<MusicPlayerWithModalProps> = ({
         onToggleShuffle={onToggleShuffle}
         onTrackPress={handleTrackPress}
         isInLayout={isInLayout}
+        playbackMethod={playbackMethod}
       />
       
       <MusicDetailModal
