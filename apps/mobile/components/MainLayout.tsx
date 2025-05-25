@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Image, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors } from '../utils/colors';
 import { MusicPlayerWithModal } from './MusicPlayerWithModal';
+import { AnimatedBackground } from './AnimatedBackground';
 import { Track, PlaybackState } from '../types/spotify';
 
 interface MainLayoutProps {
@@ -42,6 +43,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       className="flex-1"
       style={{ backgroundColor: colors.background.primary }}
     >
+      <AnimatedBackground />
+      
       {/* Header avec logo */}
       <View className="items-center py-4 px-4">
         <TouchableOpacity onPress={onLogoPress} disabled={!onLogoPress}>

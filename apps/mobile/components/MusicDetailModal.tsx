@@ -429,41 +429,6 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
               </View>
             </View>
           )}
-
-          {/* Section pour les clips vidéo (future fonctionnalité) */}
-          <View style={{ paddingHorizontal: 30, marginBottom: 40 }}>
-            <View
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                borderRadius: 15,
-                padding: 20,
-                alignItems: 'center',
-              }}
-            >
-              <Ionicons name="videocam-outline" size={32} color={colors.text.secondary} />
-              <Text
-                style={{
-                  color: colors.text.secondary,
-                  fontSize: 16,
-                  textAlign: 'center',
-                  marginTop: 10,
-                }}
-              >
-                Clip vidéo bientôt disponible
-              </Text>
-              <Text
-                style={{
-                  color: colors.text.secondary,
-                  fontSize: 12,
-                  textAlign: 'center',
-                  marginTop: 5,
-                  opacity: 0.7,
-                }}
-              >
-                Les clips vidéo seront intégrés dans une future mise à jour
-              </Text>
-            </View>
-          </View>
         </ScrollView>
       </Animated.View>
     </Modal>

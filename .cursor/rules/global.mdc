@@ -25,3 +25,4 @@ Le backend est hebergé sur Render, pour voir un changement backend il faut donc
 
 - Pour le style tu dois utiliser Native Wind
 
+- Suite à une modification tu dois absolument vérifier si il y a des erreurs typescript avec npx tsc --noEmit

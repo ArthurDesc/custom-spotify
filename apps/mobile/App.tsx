@@ -16,6 +16,7 @@ import { MusicPlayerCard } from './components/MusicPlayerCard';
 import { MainLayout } from './components/MainLayout';
 import { HomeContent } from './components/HomeContent';
 import { LikedTracksContent } from './components/LikedTracksContent';
+import { AnimatedBackground } from './components/AnimatedBackground';
 
 // Couleurs
 import { colors } from './utils/colors';
@@ -80,6 +81,7 @@ export default function App() {
   if (auth.loading || likedTracks.loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+        <AnimatedBackground />
         <LoadingSpinner />
         <StatusBar style="light" />
       </View>
@@ -90,6 +92,7 @@ export default function App() {
   if (!auth.isAuthenticated) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background.primary }]}>
+        <AnimatedBackground />
         <View style={styles.loginContainer}>
           <TouchableOpacity 
             style={[styles.loginButton, { backgroundColor: colors.primary.purple }]}
