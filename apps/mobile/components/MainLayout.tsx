@@ -63,22 +63,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
       {/* Lecteur musical en bas (si activé) */}
       {showMusicPlayer && (
-        <View className="px-4 pb-4">
-          <MusicPlayerWithModal
-            currentTrack={currentTrack}
-            playbackState={playbackState}
-            onPlaylistPress={onPlaylistPress}
-            onPause={onPause}
-            onResume={onResume}
-            onNext={onNext}
-            onPrevious={onPrevious}
-            onToggleShuffle={onToggleShuffle}
-            onToggleRepeat={onToggleRepeat}
-            onSeek={onSeek}
-            onVolumeChange={onVolumeChange}
-            isInLayout={true}
-          />
-        </View>
+        <MusicPlayerWithModal
+          currentTrack={currentTrack}
+          playbackState={playbackState}
+          onPlaylistPress={onPlaylistPress}
+          onPause={onPause}
+          onResume={onResume}
+          onNext={onNext}
+          onPrevious={onPrevious}
+          onToggleShuffle={onToggleShuffle}
+          onToggleRepeat={onToggleRepeat}
+          onSeek={onSeek}
+          onVolumeChange={onVolumeChange}
+          isInLayout={true}
+        />
       )}
     </SafeAreaView>
   );

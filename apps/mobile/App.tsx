@@ -265,6 +265,7 @@ export default function App() {
         playlists={playlists.playlistsInfo.playlists}
         loading={playlists.loading}
         onPlaylistPress={handlePlaylistPress}
+        onMainPlaylistPress={handleLikedTracksPress}
       />
       <StatusBar style="light" />
     </MainLayout>

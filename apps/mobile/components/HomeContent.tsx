@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../utils/colors';
 import { Playlist } from '../types/spotify';
 
@@ -7,12 +8,14 @@ interface HomeContentProps {
   playlists: Playlist[];
   loading: boolean;
   onPlaylistPress: (playlist: Playlist) => void;
+  onMainPlaylistPress: () => void;
 }
 
 export const HomeContent: React.FC<HomeContentProps> = ({
   playlists,
   loading,
   onPlaylistPress,
+  onMainPlaylistPress,
 }) => {
   return (
     <ScrollView 
@@ -20,6 +23,28 @@ export const HomeContent: React.FC<HomeContentProps> = ({
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 20 }}
     >
+      {/* Bouton playlist principal */}
+      <View className="items-center mb-6">
+        <TouchableOpacity 
+          onPress={onMainPlaylistPress}
+          className="bg-background-card px-6 py-3 rounded-full flex-row items-center"
+          style={{ backgroundColor: colors.background.card }}
+        >
+          <Ionicons 
+            name="heart" 
+            size={20} 
+            color={colors.text.primary} 
+            style={{ marginRight: 8 }}
+          />
+          <Text 
+            className="text-text-primary font-semibold text-base"
+            style={{ color: colors.text.primary }}
+          >
+            Playlist principal
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Section "Mes playlists" */}
       <View className="mb-6">
         <Text 
