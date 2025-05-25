@@ -13,6 +13,7 @@ interface MusicPlayerCardProps {
   onNext: () => void;
   onPrevious: () => void;
   onToggleShuffle: () => void;
+  onTrackPress?: () => void;
   isInLayout?: boolean;
 }
 
@@ -25,6 +26,7 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
   onNext,
   onPrevious,
   onToggleShuffle,
+  onTrackPress,
   isInLayout = false,
 }) => {
   const isPlaying = playbackState?.is_playing || false;
@@ -58,9 +60,11 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
         {/* Lecteur musical */}
         {currentTrack && (
-          <View 
+          <TouchableOpacity 
+            onPress={onTrackPress}
             className="bg-background-secondary rounded-3xl p-3 flex-row items-center"
             style={{ backgroundColor: colors.background.secondary }}
+            activeOpacity={0.8}
           >
             {/* Image de l'album */}
             <View className="w-10 h-10 rounded-lg bg-text-secondary mr-3 overflow-hidden">
@@ -102,7 +106,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
             <View className="flex-row items-center space-x-1">
               {/* Bouton shuffle */}
               <TouchableOpacity 
-                onPress={onToggleShuffle}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onToggleShuffle();
+                }}
                 className="p-1.5"
               >
                 <Ionicons 
@@ -114,7 +121,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
               {/* Bouton précédent */}
               <TouchableOpacity 
-                onPress={onPrevious}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onPrevious();
+                }}
                 className="p-1.5"
               >
                 <Ionicons 
@@ -126,7 +136,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
               {/* Bouton play/pause */}
               <TouchableOpacity 
-                onPress={isPlaying ? onPause : onResume}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  isPlaying ? onPause() : onResume();
+                }}
                 className="p-1.5"
               >
                 <Ionicons 
@@ -138,7 +151,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
               {/* Bouton suivant */}
               <TouchableOpacity 
-                onPress={onNext}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onNext();
+                }}
                 className="p-1.5"
               >
                 <Ionicons 
@@ -149,7 +165,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
               </TouchableOpacity>
 
               {/* Bouton Frame (icône personnalisée) */}
-              <TouchableOpacity className="p-1.5">
+              <TouchableOpacity 
+                onPress={(e) => e.stopPropagation()}
+                className="p-1.5"
+              >
                 <View 
                   className="w-4 h-4 border-2 rounded border-primary-purple"
                   style={{ borderColor: colors.primary.purple }}
@@ -167,7 +186,7 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -232,9 +251,11 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
       {/* Lecteur musical en bas */}
       {currentTrack && (
-        <View 
+        <TouchableOpacity 
+          onPress={onTrackPress}
           className="bg-background-secondary rounded-3xl p-3 flex-row items-center"
           style={{ backgroundColor: colors.background.secondary }}
+          activeOpacity={0.8}
         >
           {/* Image de l'album */}
           <View className="w-10 h-10 rounded-lg bg-text-secondary mr-3 overflow-hidden">
@@ -276,7 +297,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
           <View className="flex-row items-center space-x-1">
             {/* Bouton shuffle */}
             <TouchableOpacity 
-              onPress={onToggleShuffle}
+              onPress={(e) => {
+                e.stopPropagation();
+                onToggleShuffle();
+              }}
               className="p-1.5"
             >
               <Ionicons 
@@ -288,7 +312,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
             {/* Bouton précédent */}
             <TouchableOpacity 
-              onPress={onPrevious}
+              onPress={(e) => {
+                e.stopPropagation();
+                onPrevious();
+              }}
               className="p-1.5"
             >
               <Ionicons 
@@ -300,7 +327,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
             {/* Bouton play/pause */}
             <TouchableOpacity 
-              onPress={isPlaying ? onPause : onResume}
+              onPress={(e) => {
+                e.stopPropagation();
+                isPlaying ? onPause() : onResume();
+              }}
               className="p-1.5"
             >
               <Ionicons 
@@ -312,7 +342,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 
             {/* Bouton suivant */}
             <TouchableOpacity 
-              onPress={onNext}
+              onPress={(e) => {
+                e.stopPropagation();
+                onNext();
+              }}
               className="p-1.5"
             >
               <Ionicons 
@@ -323,7 +356,10 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
             </TouchableOpacity>
 
             {/* Bouton Frame (icône personnalisée) */}
-            <TouchableOpacity className="p-1.5">
+            <TouchableOpacity 
+              onPress={(e) => e.stopPropagation()}
+              className="p-1.5"
+            >
               <View 
                 className="w-4 h-4 border-2 rounded border-primary-purple"
                 style={{ borderColor: colors.primary.purple }}
@@ -341,7 +377,7 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
               </View>
             </TouchableOpacity>
           </View>
-        </View>
+        </TouchableOpacity>
       )}
     </View>
   );

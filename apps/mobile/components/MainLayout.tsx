@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Image, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors } from '../utils/colors';
-import { MusicPlayerCard } from './MusicPlayerCard';
+import { MusicPlayerWithModal } from './MusicPlayerWithModal';
 import { Track, PlaybackState } from '../types/spotify';
 
 interface MainLayoutProps {
@@ -14,6 +14,9 @@ interface MainLayoutProps {
   onNext: () => void;
   onPrevious: () => void;
   onToggleShuffle: () => void;
+  onToggleRepeat: () => void;
+  onSeek?: (position: number) => void;
+  onVolumeChange?: (volume: number) => void;
   onLogoPress?: () => void;
   showMusicPlayer?: boolean;
 }
@@ -28,6 +31,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onNext,
   onPrevious,
   onToggleShuffle,
+  onToggleRepeat,
+  onSeek,
+  onVolumeChange,
   onLogoPress,
   showMusicPlayer = true,
 }) => {
@@ -55,7 +61,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       {/* Lecteur musical en bas (si activé) */}
       {showMusicPlayer && (
         <View className="px-4 pb-4">
-          <MusicPlayerCard
+          <MusicPlayerWithModal
             currentTrack={currentTrack}
             playbackState={playbackState}
             onPlaylistPress={onPlaylistPress}
@@ -64,6 +70,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             onNext={onNext}
             onPrevious={onPrevious}
             onToggleShuffle={onToggleShuffle}
+            onToggleRepeat={onToggleRepeat}
+            onSeek={onSeek}
+            onVolumeChange={onVolumeChange}
             isInLayout={true}
           />
         </View>

@@ -21,7 +21,7 @@ export const HomeContent: React.FC<HomeContentProps> = ({
         className="text-text-primary text-lg font-semibold mb-4"
         style={{ color: colors.text.primary }}
       >
-        Mes playlists
+        Les playlists fréro
       </Text>
 
       {loading ? (

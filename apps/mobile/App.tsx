@@ -11,9 +11,6 @@ import { usePlayback } from './hooks/usePlayback';
 import { usePlaylists } from './hooks/usePlaylists';
 
 // Composants
-import { PlayerControls } from './components/PlayerControls';
-import { TrackList } from './components/TrackList';
-import { PlaylistCard } from './components/PlaylistCard';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { MusicPlayerCard } from './components/MusicPlayerCard';
 import { MainLayout } from './components/MainLayout';
@@ -123,6 +120,15 @@ export default function App() {
         onNext={playback.skipToNext}
         onPrevious={playback.skipToPrevious}
         onToggleShuffle={playback.toggleShuffle}
+        onToggleRepeat={playback.toggleRepeat}
+        onSeek={(position) => {
+          // TODO: Implémenter la fonction seek dans usePlayback
+          console.log('Seek to position:', position);
+        }}
+        onVolumeChange={(volume) => {
+          // TODO: Implémenter la fonction setVolume dans usePlayback
+          console.log('Volume change:', volume);
+        }}
         onLogoPress={handleBackToHome}
       >
         <LikedTracksContent
@@ -159,6 +165,15 @@ export default function App() {
       onNext={playback.skipToNext}
       onPrevious={playback.skipToPrevious}
       onToggleShuffle={playback.toggleShuffle}
+      onToggleRepeat={playback.toggleRepeat}
+      onSeek={(position) => {
+        // TODO: Implémenter la fonction seek dans usePlayback
+        console.log('Seek to position:', position);
+      }}
+      onVolumeChange={(volume) => {
+        // TODO: Implémenter la fonction setVolume dans usePlayback
+        console.log('Volume change:', volume);
+      }}
       onLogoPress={() => {}}
     >
       <HomeContent 
