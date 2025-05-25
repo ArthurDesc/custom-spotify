@@ -57,7 +57,7 @@ export const HomeContent: React.FC<HomeContentProps> = ({
           className="text-sm"
           style={{ color: colors.text.secondary }}
         >
-          Ca c'est les playlists
+          Ouais c'est les playlists ouais
         </Text>
       </View>
 
