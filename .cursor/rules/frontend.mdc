@@ -1,0 +1,8 @@
+---
+description: 
+globs: *.tsx
+alwaysApply: false
+---
+- La librairie à importer pour les icones est : import { Ionicons } from '@expo/vector-icons';
+
+- Si il y a des interactions des inputs du composant tu dois mettre des animations fluide et moderne.

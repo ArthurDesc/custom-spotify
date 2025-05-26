@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView, TextInput } from 'react-native';
 import { useSpotifyRemote } from '../hooks/useSpotifyRemote';
-import { deviceService } from '../services';
+import { DeviceSelector } from './DeviceSelector';
+import { debugService } from '../services/debugService';
 
 const SpotifyRemoteTest: React.FC = () => {
   const {
@@ -11,11 +12,14 @@ const SpotifyRemoteTest: React.FC = () => {
     isSpotifyAppAvailable,
     isLoading,
     error,
+    devices,
     authenticate,
     connectRemote,
     disconnectRemote,
     clearSession,
     clearError,
+    loadDevices,
+    selectDevice,
     playTrack,
     pausePlayback,
     resumePlayback,
@@ -24,20 +28,16 @@ const SpotifyRemoteTest: React.FC = () => {
     setVolume,
     setShuffle,
     setRepeat,
+    runDiagnostic,
   } = useSpotifyRemote();
 
   const [trackUri, setTrackUri] = useState('spotify:track:4iV5W9uYEdYUVa79Axb7Rh'); // Exemple d'URI
   const [volume, setVolumeInput] = useState('50');
-  const [devices, setDevices] = useState<any[]>([]);
 
   const handleAuthenticate = async () => {
     try {
       await authenticate();
       Alert.alert('Succès', 'Authentification réussie !');
-      // Charger automatiquement les appareils après authentification
-      setTimeout(() => {
-        handleListDevices();
-      }, 1000);
     } catch (err) {
       Alert.alert('Erreur', 'Échec de l\'authentification');
     }
@@ -83,17 +83,8 @@ const SpotifyRemoteTest: React.FC = () => {
 
   const handleListDevices = async () => {
     try {
-      console.log('🔍 Récupération des appareils...');
-      const devicesResponse = await deviceService.getAvailableDevices();
-      const devicesList = devicesResponse.devices;
-      setDevices(devicesList);
-      
-      console.log('📱 Appareils trouvés:', devicesList.length);
-      devicesList.forEach((device: any, index: number) => {
-        console.log(`📱 Appareil ${index + 1}: ${device.name} (${device.type}) - Actif: ${device.is_active}`);
-      });
-      
-      if (devicesList.length === 0) {
+      await loadDevices();
+      if (devices.length === 0) {
         Alert.alert('Aucun appareil', 'Aucun appareil Spotify trouvé. Assurez-vous que Spotify est ouvert sur un appareil.');
       }
     } catch (err) {
@@ -103,49 +94,55 @@ const SpotifyRemoteTest: React.FC = () => {
   };
 
   const handleSelectDevice = async (deviceId: string, deviceName: string) => {
-    console.log(`🔄 Transfert vers l'appareil: ${deviceName}`);
-    
-    // Proposer de démarrer la lecture ou juste transférer
+    try {
+      await selectDevice(deviceId, deviceName);
+      Alert.alert('Succès', `Lecture démarrée sur ${deviceName}`);
+    } catch (err) {
+      Alert.alert('Erreur', 'Impossible de transférer la lecture');
+    }
+  };
+
+  const handleRunDiagnostic = async () => {
     Alert.alert(
-      'Transférer la lecture',
-      `Voulez-vous transférer la lecture vers "${deviceName}" ?`,
+      'Diagnostic',
+      'Le diagnostic complet va s\'exécuter. Consultez la console pour les résultats détaillés.',
       [
-        {
-          text: 'Annuler',
-          style: 'cancel'
-        },
-        {
-          text: 'Transférer seulement',
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Lancer', 
           onPress: async () => {
-            try {
-              await deviceService.transferPlayback(deviceId, false);
-              setTimeout(() => handleListDevices(), 1000);
-              Alert.alert('Succès', `Lecture transférée vers ${deviceName}`);
-            } catch (err) {
-              console.error('Erreur transfert appareil:', err);
-              Alert.alert('Erreur', 'Impossible de transférer la lecture');
-            }
-          }
-        },
-        {
-          text: 'Transférer et jouer',
-          onPress: async () => {
-            try {
-              await deviceService.transferPlayback(deviceId, true);
-              setTimeout(() => handleListDevices(), 1000);
-              Alert.alert('Succès', `Lecture démarrée sur ${deviceName}`);
-            } catch (err) {
-              console.error('Erreur transfert appareil:', err);
-              Alert.alert('Erreur', 'Impossible de transférer la lecture');
-            }
+            console.log('🚀 [SpotifyRemoteTest] Lancement du diagnostic utilisateur');
+            await debugService.runFullDiagnostic();
+            await runDiagnostic();
+            Alert.alert('Diagnostic terminé', 'Consultez la console pour les résultats détaillés.');
           }
         }
       ]
     );
   };
 
-  const getActiveDevice = () => {
-    return devices.find(device => device.is_active);
+  const handleTestDeviceHealth = async () => {
+    if (devices.length === 0) {
+      Alert.alert('Erreur', 'Aucun appareil disponible pour le test');
+      return;
+    }
+
+    const device = devices[0]; // Tester le premier appareil
+    console.log(`🏥 [SpotifyRemoteTest] Test de santé pour: ${device.name}`);
+    
+    try {
+      const healthResult = await debugService.validateDeviceHealth(device.id, device.name);
+      
+      const message = healthResult.healthy 
+        ? `✅ Appareil ${device.name} en bonne santé !`
+        : `❌ Problème détecté sur ${device.name}: ${healthResult.error}`;
+      
+      Alert.alert('Test de santé', message);
+      console.log('🏥 [SpotifyRemoteTest] Résultat santé:', healthResult);
+    } catch (error) {
+      console.error('❌ [SpotifyRemoteTest] Erreur test santé:', error);
+      Alert.alert('Erreur', 'Impossible de tester la santé de l\'appareil');
+    }
   };
 
   return (
@@ -253,75 +250,12 @@ const SpotifyRemoteTest: React.FC = () => {
 
       {/* Appareils disponibles */}
       {isAuthenticated && (
-        <View className="bg-gray-800 p-4 rounded-lg mb-4">
-          <Text className="text-white text-lg font-semibold mb-3">Appareils Spotify</Text>
-          
-          {/* Appareil actuellement actif */}
-          {getActiveDevice() && (
-            <View className="bg-green-900 border-2 border-green-500 p-3 rounded-lg mb-3">
-              <Text className="text-green-300 font-semibold mb-1">🎵 Appareil actif :</Text>
-              <Text className="text-white font-bold">{getActiveDevice()?.name}</Text>
-              <Text className="text-green-200 text-sm">
-                {getActiveDevice()?.type} • Volume: {getActiveDevice()?.volume_percent}%
-              </Text>
-            </View>
-          )}
-          
-          <TouchableOpacity
-            onPress={handleListDevices}
-            className="p-3 rounded-lg bg-purple-600 mb-3"
-          >
-            <Text className="text-white text-center font-semibold">
-              🔄 Rafraîchir les appareils
-            </Text>
-          </TouchableOpacity>
-
-          {devices.length > 0 && (
-            <View>
-              <Text className="text-gray-300 mb-2">Sélectionnez un appareil :</Text>
-              {devices.map((device: any, index: number) => (
-                <TouchableOpacity
-                  key={device.id}
-                  onPress={() => handleSelectDevice(device.id, device.name)}
-                  className={`p-3 rounded-lg mb-2 ${
-                    device.is_active 
-                      ? 'bg-green-600 border-2 border-green-400' 
-                      : 'bg-gray-700 border-2 border-gray-600'
-                  }`}
-                >
-                  <View className="flex-row justify-between items-center">
-                    <View className="flex-1">
-                      <Text className="text-white font-semibold">
-                        {device.name}
-                      </Text>
-                      <Text className="text-gray-300 text-sm">
-                        {device.type} • Volume: {device.volume_percent}%
-                      </Text>
-                    </View>
-                    <View className="flex-row items-center">
-                      {device.is_active && (
-                        <Text className="text-green-300 font-bold mr-2">
-                          ✅ ACTIF
-                        </Text>
-                      )}
-                      <Text className="text-gray-400">
-                        {device.is_active ? '🎵' : '📱'}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {devices.length === 0 && (
-            <View className="bg-gray-700 p-3 rounded-lg">
-              <Text className="text-gray-300 text-center">
-                Aucun appareil trouvé. Cliquez sur "Rafraîchir" après avoir ouvert Spotify.
-              </Text>
-            </View>
-          )}
-        </View>
+        <DeviceSelector
+          devices={devices}
+          onSelectDevice={handleSelectDevice}
+          onRefreshDevices={handleListDevices}
+          loading={isLoading}
+        />
       )}
 
       {/* Contrôles de lecture */}
@@ -459,7 +393,29 @@ const SpotifyRemoteTest: React.FC = () => {
         </Text>
       </View>
 
-      
+      <View className="bg-gray-800 p-4 rounded-lg mb-4">
+        <Text className="text-white text-lg font-semibold mb-3">Diagnostic</Text>
+        
+        <TouchableOpacity
+          onPress={handleRunDiagnostic}
+          className="p-3 rounded-lg bg-purple-600 mb-2"
+        >
+          <Text className="text-white text-center font-semibold">
+            🔍 Diagnostic complet
+          </Text>
+        </TouchableOpacity>
+
+        {devices.length > 0 && (
+          <TouchableOpacity
+            onPress={handleTestDeviceHealth}
+            className="p-3 rounded-lg bg-blue-600"
+          >
+            <Text className="text-white text-center font-semibold">
+              🏥 Test santé appareil ({devices[0]?.name})
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </ScrollView>
   );
 };

@@ -16,6 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { colors } from '../utils/colors';
 import { Track, PlaybackState } from '../types/spotify';
+import { useSpotifyRemote } from '../hooks/useSpotifyRemote';
+import { DeviceSelector } from './DeviceSelector';
 
 interface MusicDetailModalProps {
   visible: boolean;
@@ -51,6 +53,16 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [volume, setVolume] = useState(50);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
+  const [showDeviceSelector, setShowDeviceSelector] = useState(false);
+
+  // Hook Spotify Remote pour la sélection d'appareil
+  const {
+    devices,
+    isAuthenticated,
+    isLoading: remoteLoading,
+    loadDevices,
+    selectDevice,
+  } = useSpotifyRemote();
 
   const isPlaying = playbackState?.is_playing || false;
   const isShuffled = playbackState?.shuffle_state || false;
@@ -371,6 +383,13 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
               marginBottom: 40,
             }}
           >
+            {/* Sélection d'appareil */}
+            <TouchableOpacity
+              onPress={() => setShowDeviceSelector(!showDeviceSelector)}
+            >
+              <Ionicons name="phone-portrait" size={24} color={colors.text.secondary} />
+            </TouchableOpacity>
+
             {/* Volume */}
             <TouchableOpacity
               onPress={() => setShowVolumeControl(!showVolumeControl)}
@@ -387,12 +406,20 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
             <TouchableOpacity>
               <Ionicons name="heart-outline" size={24} color={colors.text.secondary} />
             </TouchableOpacity>
-
-            {/* Queue */}
-            <TouchableOpacity>
-              <Ionicons name="list" size={24} color={colors.text.secondary} />
-            </TouchableOpacity>
           </View>
+
+          {/* Sélecteur d'appareil (conditionnel) */}
+          {showDeviceSelector && isAuthenticated && (
+            <View style={{ paddingHorizontal: 30, marginBottom: 20 }}>
+              <DeviceSelector
+                devices={devices}
+                onSelectDevice={selectDevice}
+                onRefreshDevices={loadDevices}
+                loading={remoteLoading}
+                compact={true}
+              />
+            </View>
+          )}
 
           {/* Contrôle de volume (conditionnel) */}
           {showVolumeControl && (

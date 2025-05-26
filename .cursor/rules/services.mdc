@@ -1,0 +1,6 @@
+---
+description: 
+globs: *.ts
+alwaysApply: false
+---
+- Dans le cas ou tu créé un nouveau service frontend il faut toujours suivre la méthode TDD (Test Driven Development).

@@ -11,6 +11,7 @@ import { usePlayback } from './hooks/usePlayback';
 import { usePlaylists } from './hooks/usePlaylists';
 import { usePlaylistDetail } from './hooks/usePlaylistDetail';
 import { useSearch } from './hooks/useSearch';
+import { useSpotifyRemote } from './hooks/useSpotifyRemote';
 
 // Composants
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -42,6 +43,7 @@ export default function App() {
   const playlists = usePlaylists();
   const playlistDetail = usePlaylistDetail();
   const search = useSearch();
+  const remote = useSpotifyRemote();
 
   // Initialiser les données après authentification
   useEffect(() => {
@@ -58,8 +60,29 @@ export default function App() {
       await playback.fetchPlaybackState();
       // Charger les playlists
       await playlists.fetchPlaylists();
+      
+      // Initialiser automatiquement le Remote SDK
+      await initializeRemoteSDK();
     } catch (error) {
       console.error('Erreur initialisation:', error);
+    }
+  };
+
+  const initializeRemoteSDK = async () => {
+    try {
+      console.log('🔌 Initialisation automatique du Remote SDK...');
+      
+      // Vérifier si le Remote SDK n'est pas déjà initialisé
+      if (!remote.isAuthenticated) {
+        // Le Remote SDK va automatiquement utiliser le token existant
+        await remote.authenticate();
+        console.log('✅ Remote SDK initialisé automatiquement');
+      } else {
+        console.log('✅ Remote SDK déjà initialisé');
+      }
+    } catch (error) {
+      console.warn('⚠️ Échec initialisation Remote SDK (non critique):', error);
+      // Ne pas bloquer l'app si le Remote SDK échoue
     }
   };
 

@@ -25,15 +25,23 @@ export const useSpotifyAuth = () => {
     {
       clientId: SPOTIFY_CLIENT_ID!,
       scopes: [
+        // Scopes de base
         'user-read-email',
         'user-read-private',
         'playlist-read-private',
+        'playlist-read-collaborative',
         'user-read-playback-state',
         'user-modify-playback-state',
         'user-read-currently-playing',
         'user-library-read',
+        'user-library-modify',
         'user-top-read',
-        'user-read-recently-played'
+        'user-read-recently-played',
+        'user-follow-read',
+        'user-follow-modify',
+        // Scopes pour Remote SDK
+        'app-remote-control',
+        'streaming'
       ],
       usePKCE: false,
       redirectUri,

@@ -4,6 +4,7 @@ import * as AuthSession from 'expo-auth-session';
 import { SpotifyProfile, Track, PlaybackState, AuthTokens } from '../types/spotify';
 import { authService } from './authService';
 import { playerService } from './playerService';
+import { deviceService } from './deviceService';
 
 export interface SpotifyRemoteSession {
   accessToken: string;
@@ -29,9 +30,32 @@ class SpotifyRemoteService {
     return true;
   }
 
-  // Authentification avec l'API backend existante (sans PKCE pour l'instant)
-  async authenticate(config: SpotifyRemoteConfig): Promise<SpotifyRemoteSession> {
+  // Authentification avec l'API backend existante ou utilisation d'un token existant
+  async authenticate(config?: SpotifyRemoteConfig): Promise<SpotifyRemoteSession> {
     try {
+      // Vérifier d'abord si on a déjà un token valide via authService
+      const existingToken = authService.getAccessToken();
+      
+      if (existingToken) {
+        console.log('🔍 Token existant trouvé, réutilisation...');
+        
+        // Créer une session avec le token existant
+        this.session = {
+          accessToken: existingToken,
+          refreshToken: null,
+          expirationDate: Date.now() + (3600 * 1000), // 1 heure par défaut
+          scopes: config?.scopes || this.getDefaultConfig().scopes,
+        };
+        
+        console.log('✅ Authentification réussie avec token existant !');
+        console.log('🔍 Token réutilisé:', this.session.accessToken.substring(0, 20) + '...');
+        return this.session;
+      }
+      
+      // Si pas de token existant, procéder à l'authentification normale
+      const defaultConfig = this.getDefaultConfig();
+      const finalConfig = { ...defaultConfig, ...config };
+      
       // Configuration Spotify - utiliser la même méthode que l'auth existante
       const clientId = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
       const redirectUri = AuthSession.makeRedirectUri({
@@ -46,7 +70,7 @@ class SpotifyRemoteService {
         `client_id=${clientId}&` +
         `response_type=code&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `scope=${encodeURIComponent(config.scopes.join(' '))}`;
+        `scope=${encodeURIComponent(finalConfig.scopes.join(' '))}`;
 
       console.log('🔐 Ouverture de l\'authentification Spotify (sans PKCE)...');
       
@@ -67,7 +91,7 @@ class SpotifyRemoteService {
             accessToken: tokenResponse.access_token,
             refreshToken: tokenResponse.refresh_token || null,
             expirationDate: Date.now() + (tokenResponse.expires_in * 1000),
-            scopes: config.scopes,
+            scopes: finalConfig.scopes,
           };
           
           // Configurer le authService avec le nouveau token
@@ -190,7 +214,7 @@ class SpotifyRemoteService {
     }
   }
 
-  // Contrôles de lecture avec l'API Web Spotify
+  // Contrôles de lecture avec l'API Web Spotify et gestion automatique des appareils
   async playTrack(uri: string): Promise<void> {
     if (!this.isConnected) {
       throw new Error('Remote non connecté');
@@ -199,8 +223,8 @@ class SpotifyRemoteService {
     try {
       console.log(`🎵 Lecture via API Web Spotify: ${uri}`);
       
-      // Utiliser playerService pour la lecture
-      await playerService.playTracks([uri], { position: 0 });
+      // Utiliser deviceService avec gestion automatique des appareils
+      await deviceService.playTracksWithDeviceCheck([uri], { position: 0 });
       
       console.log(`✅ Lecture lancée via API Web Spotify: ${uri}`);
       
