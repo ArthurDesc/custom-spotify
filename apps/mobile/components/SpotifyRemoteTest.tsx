@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView, TextInput } from 'react-native';
 import { useSpotifyRemote } from '../hooks/useSpotifyRemote';
-import spotifyService from '../services/spotifyService';
+import { deviceService } from '../services';
 
 const SpotifyRemoteTest: React.FC = () => {
   const {
@@ -84,7 +84,7 @@ const SpotifyRemoteTest: React.FC = () => {
   const handleListDevices = async () => {
     try {
       console.log('🔍 Récupération des appareils...');
-      const devicesResponse = await spotifyService.getAvailableDevices();
+      const devicesResponse = await deviceService.getAvailableDevices();
       const devicesList = devicesResponse.devices;
       setDevices(devicesList);
       
@@ -118,7 +118,7 @@ const SpotifyRemoteTest: React.FC = () => {
           text: 'Transférer seulement',
           onPress: async () => {
             try {
-              await spotifyService.transferPlayback(deviceId, false);
+              await deviceService.transferPlayback(deviceId, false);
               setTimeout(() => handleListDevices(), 1000);
               Alert.alert('Succès', `Lecture transférée vers ${deviceName}`);
             } catch (err) {
@@ -131,7 +131,7 @@ const SpotifyRemoteTest: React.FC = () => {
           text: 'Transférer et jouer',
           onPress: async () => {
             try {
-              await spotifyService.transferPlayback(deviceId, true);
+              await deviceService.transferPlayback(deviceId, true);
               setTimeout(() => handleListDevices(), 1000);
               Alert.alert('Succès', `Lecture démarrée sur ${deviceName}`);
             } catch (err) {

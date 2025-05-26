@@ -2,7 +2,8 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { SpotifyProfile, Track, PlaybackState, AuthTokens } from '../types/spotify';
-import spotifyService from './spotifyService';
+import { authService } from './authService';
+import { playerService } from './playerService';
 
 export interface SpotifyRemoteSession {
   accessToken: string;
@@ -69,8 +70,8 @@ class SpotifyRemoteService {
             scopes: config.scopes,
           };
           
-          // Configurer le spotifyService avec le nouveau token
-          spotifyService.setAccessToken(tokenResponse.access_token);
+          // Configurer le authService avec le nouveau token
+          authService.setAccessToken(tokenResponse.access_token);
           
           console.log('✅ Authentification réussie !');
           console.log('🔍 Token reçu:', this.session.accessToken.substring(0, 20) + '...');
@@ -198,8 +199,8 @@ class SpotifyRemoteService {
     try {
       console.log(`🎵 Lecture via API Web Spotify: ${uri}`);
       
-      // Utiliser la nouvelle méthode avec gestion automatique des appareils
-      await spotifyService.playTracksWithDeviceCheck([uri], { position: 0 });
+      // Utiliser playerService pour la lecture
+      await playerService.playTracks([uri], { position: 0 });
       
       console.log(`✅ Lecture lancée via API Web Spotify: ${uri}`);
       
@@ -227,7 +228,7 @@ class SpotifyRemoteService {
     
     try {
       console.log('⏸️ Pause via API Web Spotify');
-      await spotifyService.pausePlayback();
+      await playerService.pausePlayback();
       console.log('✅ Pause réussie');
     } catch (error) {
       console.error(`❌ Erreur pause: ${error}`);
@@ -242,7 +243,7 @@ class SpotifyRemoteService {
     
     try {
       console.log('▶️ Reprise via API Web Spotify');
-      await spotifyService.resumePlayback();
+      await playerService.resumePlayback();
       console.log('✅ Reprise réussie');
     } catch (error) {
       console.error(`❌ Erreur reprise: ${error}`);
@@ -257,7 +258,7 @@ class SpotifyRemoteService {
     
     try {
       console.log('⏭️ Piste suivante via API Web Spotify');
-      await spotifyService.skipToNext();
+      await playerService.skipToNext();
       console.log('✅ Piste suivante réussie');
     } catch (error) {
       console.error(`❌ Erreur piste suivante: ${error}`);
@@ -272,7 +273,7 @@ class SpotifyRemoteService {
     
     try {
       console.log('⏮️ Piste précédente via API Web Spotify');
-      await spotifyService.skipToPrevious();
+      await playerService.skipToPrevious();
       console.log('✅ Piste précédente réussie');
     } catch (error) {
       console.error(`❌ Erreur piste précédente: ${error}`);
@@ -287,7 +288,7 @@ class SpotifyRemoteService {
     
     try {
       console.log(`🔊 Volume via API Web Spotify: ${volume}%`);
-      await spotifyService.setVolume(volume);
+      await playerService.setVolume(volume);
       console.log(`✅ Volume réglé: ${volume}%`);
     } catch (error) {
       console.error(`❌ Erreur volume: ${error}`);
@@ -302,7 +303,7 @@ class SpotifyRemoteService {
     
     try {
       console.log(`🔀 Shuffle via API Web Spotify: ${enabled ? 'ON' : 'OFF'}`);
-      await spotifyService.setShuffle(enabled);
+      await playerService.setShuffle(enabled);
       console.log(`✅ Shuffle réglé: ${enabled ? 'ON' : 'OFF'}`);
     } catch (error) {
       console.error(`❌ Erreur shuffle: ${error}`);
@@ -317,7 +318,7 @@ class SpotifyRemoteService {
     
     try {
       console.log(`🔁 Repeat via API Web Spotify: ${mode}`);
-      await spotifyService.setRepeat(mode);
+      await playerService.setRepeat(mode);
       console.log(`✅ Repeat réglé: ${mode}`);
     } catch (error) {
       console.error(`❌ Erreur repeat: ${error}`);

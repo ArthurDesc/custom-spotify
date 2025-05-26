@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { PlaylistDetailInfo, Playlist } from '../types/spotify';
-import spotifyService from '../services/spotifyService';
+import { playlistService } from '../services';
 
 export const usePlaylistDetail = () => {
   const [playlistDetailInfo, setPlaylistDetailInfo] = useState<PlaylistDetailInfo | null>(null);
@@ -18,8 +18,8 @@ export const usePlaylistDetail = () => {
 
       // Récupérer les détails de la playlist et ses tracks
       const [playlistData, tracksData] = await Promise.all([
-        spotifyService.getPlaylist(playlistId),
-        spotifyService.getPlaylistTracks(playlistId, offset, 50)
+        playlistService.getPlaylist(playlistId),
+        playlistService.getPlaylistTracks(playlistId, offset, 50)
       ]);
 
       const newTracks = tracksData.items

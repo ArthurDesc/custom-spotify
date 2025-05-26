@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { PlaylistsInfo, Playlist } from '../types/spotify';
-import spotifyService from '../services/spotifyService';
+import { playlistService } from '../services';
 
 export const usePlaylists = () => {
   const [playlistsInfo, setPlaylistsInfo] = useState<PlaylistsInfo>({
@@ -15,7 +15,7 @@ export const usePlaylists = () => {
       setLoading(true);
       setError(null);
       
-      const response = await spotifyService.getPlaylists(50);
+      const response = await playlistService.getPlaylists(50);
       
       setPlaylistsInfo({
         total: response.total,

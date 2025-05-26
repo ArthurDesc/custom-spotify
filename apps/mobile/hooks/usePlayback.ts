@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { PlaybackState, Track } from '../types/spotify';
-import spotifyService from '../services/spotifyService';
+import { playerService } from '../services';
 import spotifyRemoteService from '../services/spotifyRemoteService';
 
 export const usePlayback = () => {
@@ -12,7 +12,7 @@ export const usePlayback = () => {
 
   const fetchPlaybackState = async () => {
     try {
-      const data = await spotifyService.getPlaybackState();
+      const data = await playerService.getPlaybackState();
       if (data) {
         setPlaybackState(data);
         setCurrentTrack(data.item);
@@ -66,7 +66,7 @@ export const usePlayback = () => {
       
       // Si le shuffle est activé, on doit d'abord le désactiver temporairement
       if (wasShuffleOn) {
-        await spotifyService.setShuffle(false);
+        await playerService.setShuffle(false);
         // Petit délai pour que Spotify traite la commande
         await new Promise(resolve => setTimeout(resolve, 300));
       }
@@ -74,12 +74,12 @@ export const usePlayback = () => {
       // Créer la liste des URIs à partir du titre sélectionné
       const urisFromSelected = allTracks.slice(selectedIndex).map(track => track.uri);
       
-      await spotifyService.playTracks(urisFromSelected, { position: 0 });
+      await playerService.playTracks(urisFromSelected, { position: 0 });
       
       // Si le shuffle était activé, le réactiver après un délai
       if (wasShuffleOn) {
         setTimeout(async () => {
-          await spotifyService.setShuffle(true);
+          await playerService.setShuffle(true);
         }, 1000);
       }
       
@@ -106,7 +106,7 @@ export const usePlayback = () => {
       }
       
       // Fallback API Web
-      await spotifyService.pausePlayback();
+      await playerService.pausePlayback();
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
       console.error('Erreur pause:', error);
@@ -122,7 +122,7 @@ export const usePlayback = () => {
       }
       
       // Fallback API Web
-      await spotifyService.resumePlayback();
+      await playerService.resumePlayback();
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
       console.error('Erreur resume:', error);
@@ -138,7 +138,7 @@ export const usePlayback = () => {
       }
       
       // Fallback API Web
-      await spotifyService.skipToNext();
+      await playerService.skipToNext();
       setTimeout(() => fetchPlaybackState(), 1000);
     } catch (error) {
       console.error('Erreur skip:', error);
@@ -154,7 +154,7 @@ export const usePlayback = () => {
       }
       
       // Fallback API Web
-      await spotifyService.skipToPrevious();
+      await playerService.skipToPrevious();
       setTimeout(() => fetchPlaybackState(), 1000);
     } catch (error) {
       console.error('Erreur previous:', error);
@@ -174,7 +174,7 @@ export const usePlayback = () => {
       }
       
       // Fallback API Web
-      await spotifyService.setShuffle(newShuffleState);
+      await playerService.setShuffle(newShuffleState);
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
       console.error('Erreur toggle shuffle:', error);
@@ -208,7 +208,7 @@ export const usePlayback = () => {
       }
       
       // Fallback API Web
-      await spotifyService.setRepeat(newRepeatState);
+      await playerService.setRepeat(newRepeatState);
       setTimeout(() => fetchPlaybackState(), 500);
     } catch (error) {
       console.error('Erreur toggle repeat:', error);

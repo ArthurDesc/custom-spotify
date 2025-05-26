@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import { Alert } from 'react-native';
 import { SpotifyProfile } from '../types/spotify';
-import spotifyService from '../services/spotifyService';
+import { authService, profileService } from '../services';
 
 const SPOTIFY_CLIENT_ID = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
 
@@ -59,8 +59,8 @@ export const useSpotifyAuth = () => {
       console.log('🔍 Code reçu:', code);
       console.log('🔍 Redirect URI utilisée:', redirectUri);
       
-      const tokenData = await spotifyService.exchangeCodeForToken(code, redirectUri);
-      spotifyService.setAccessToken(tokenData.access_token);
+      const tokenData = await authService.exchangeCodeForToken(code, redirectUri);
+      authService.setAccessToken(tokenData.access_token);
       
       setIsAuthenticated(true);
       await fetchUserProfile();
@@ -74,7 +74,7 @@ export const useSpotifyAuth = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const profileData = await spotifyService.getUserProfile();
+      const profileData = await profileService.getUserProfile();
       setProfile(profileData);
     } catch (error) {
       console.error('Erreur fetch profile:', error);
@@ -89,7 +89,7 @@ export const useSpotifyAuth = () => {
   const logout = () => {
     setIsAuthenticated(false);
     setProfile(null);
-    spotifyService.setAccessToken('');
+    authService.setAccessToken('');
   };
 
   return {

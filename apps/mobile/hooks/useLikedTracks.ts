@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert } from 'react-native';
 import { LikedTracksInfo, Track } from '../types/spotify';
-import spotifyService from '../services/spotifyService';
+import { playlistService } from '../services';
 
 export const useLikedTracks = () => {
   const [likedTracksInfo, setLikedTracksInfo] = useState<LikedTracksInfo>({
@@ -21,7 +21,7 @@ export const useLikedTracks = () => {
         setLoadingMore(true);
       }
 
-      const data = await spotifyService.getLikedTracks(offset, 50);
+      const data = await playlistService.getLikedTracks(offset, 50);
       const newTracks = data.items.map((item: any) => item.track).filter((track: any) => track);
       
       setLikedTracksInfo(prev => ({

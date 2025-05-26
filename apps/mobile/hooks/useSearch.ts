@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { SearchResults, Artist, Album, ArtistAlbumsInfo, AlbumTracksInfo, Track } from '../types/spotify';
-import spotifyService from '../services/spotifyService';
+import { searchService } from '../services';
 
 export const useSearch = () => {
   const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
@@ -30,7 +30,7 @@ export const useSearch = () => {
     setSearchQuery(query);
 
     try {
-      const results = await spotifyService.search(query, types);
+      const results = await searchService.search(query, types);
       setSearchResults(results);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de recherche');
@@ -50,7 +50,7 @@ export const useSearch = () => {
     }
 
     try {
-      const response = await spotifyService.getArtistAlbums(artist.id, offset);
+      const response = await searchService.getArtistAlbums(artist.id, offset);
       
       const newAlbumsInfo: ArtistAlbumsInfo = {
         albums: response.items,
@@ -84,7 +84,7 @@ export const useSearch = () => {
     }
 
     try {
-      const response = await spotifyService.getAlbumTracks(album.id, offset);
+      const response = await searchService.getAlbumTracks(album.id, offset);
       
       // Enrichir les tracks avec les informations de l'album
       const enrichedTracks: Track[] = response.items.map((track: any) => ({
