@@ -77,7 +77,6 @@ export const LikedTracksContent: React.FC<LikedTracksContentProps> = ({
         <TrackList
           tracks={likedTracksInfo.tracks}
           currentTrackId={currentTrack?.id}
-          loadingTrackId={loadingTrackId}
           isPlaying={playbackState?.is_playing}
           onTrackPress={onTrackPress}
           onLoadMore={onLoadMore}
@@ -87,4 +86,4 @@ export const LikedTracksContent: React.FC<LikedTracksContentProps> = ({
       </View>
     </View>
   );
-}; 
+};

@@ -130,7 +130,6 @@ export const PlaylistDetailContent: React.FC<PlaylistDetailContentProps> = ({
         <TrackList
           tracks={tracks}
           currentTrackId={currentTrack?.id}
-          loadingTrackId={loadingTrackId}
           isPlaying={playbackState?.is_playing}
           onTrackPress={onTrackPress}
           onLoadMore={onLoadMore}
@@ -140,4 +139,4 @@ export const PlaylistDetailContent: React.FC<PlaylistDetailContentProps> = ({
       </View>
     </View>
   );
-}; 
+};
