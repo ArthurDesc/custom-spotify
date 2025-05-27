@@ -215,16 +215,17 @@ class SpotifyRemoteService {
   }
 
   // Contrôles de lecture avec l'API Web Spotify et gestion automatique des appareils
-  async playTrack(uri: string): Promise<void> {
+  async playTrack(uri: string, contextUri?: string): Promise<void> {
     if (!this.isConnected) {
       throw new Error('Remote non connecté');
     }
     
     try {
       console.log(`🎵 Lecture via API Web Spotify: ${uri}`);
+      console.log(`🎵 Context URI: ${contextUri}`);
       
       // Utiliser deviceService avec gestion automatique des appareils
-      await deviceService.playTracksWithDeviceCheck([uri], { position: 0 });
+      await deviceService.playTracksWithDeviceCheck([uri], { position: 0 }, contextUri);
       
       console.log(`✅ Lecture lancée via API Web Spotify: ${uri}`);
       

@@ -107,7 +107,7 @@ export default function App() {
   const handleLogout = () => {
     auth.logout();
     likedTracks.reset();
-    playback.reset();
+    // Pas de reset nécessaire
     playlists.reset();
     playlistDetail.reset();
     setShowLikedTracks(false);
@@ -120,10 +120,10 @@ export default function App() {
       // Jouer depuis la liste fournie (recherche, etc.)
       playback.playTrack(trackUri, tracks);
     } else if (selectedPlaylist && playlistDetail.playlistDetailInfo) {
-      // Jouer depuis la playlist
-      playback.playTrack(trackUri, playlistDetail.playlistDetailInfo.tracks);
+      // Jouer depuis la playlist avec son URI
+      playback.playTrack(trackUri, playlistDetail.playlistDetailInfo.tracks, selectedPlaylist.uri);
     } else {
-      // Jouer depuis les titres likés
+      // Jouer depuis les titres likés (pas d'URI de playlist spécifique)
       playback.playTrack(trackUri, likedTracks.likedTracksInfo.tracks);
     }
   };
@@ -185,7 +185,7 @@ export default function App() {
 
   // Vue détaillée des titres likés
   if (showLikedTracks) {
-    const displayCurrentTrack = playback.getDisplayCurrentTrack();
+    const displayCurrentTrack = playback.currentTrack;
     
     return (
       <MainLayout
@@ -197,7 +197,7 @@ export default function App() {
         onNext={playback.skipToNext}
         onPrevious={playback.skipToPrevious}
         onToggleShuffle={playback.toggleShuffle}
-        onToggleRepeat={playback.toggleRepeat}
+        onToggleRepeat={() => console.log("Toggle repeat")}
         onSeek={(position) => {
           // TODO: Implémenter la fonction seek dans usePlayback
           console.log('Seek to position:', position);
@@ -223,7 +223,7 @@ export default function App() {
           onNext={playback.skipToNext}
           onPrevious={playback.skipToPrevious}
           onToggleShuffle={playback.toggleShuffle}
-          onToggleRepeat={playback.toggleRepeat}
+          onToggleRepeat={() => console.log("Toggle repeat")}
           onTrackPress={(trackUri) => handleTrackPress(trackUri)}
           onLoadMore={likedTracks.loadMoreTracks}
         />
@@ -234,7 +234,7 @@ export default function App() {
 
   // Vue détaillée d'une playlist
   if (selectedPlaylist && playlistDetail.playlistDetailInfo) {
-    const displayCurrentTrack = playback.getDisplayCurrentTrack();
+    const displayCurrentTrack = playback.currentTrack;
     
     return (
       <MainLayout
@@ -246,7 +246,7 @@ export default function App() {
         onNext={playback.skipToNext}
         onPrevious={playback.skipToPrevious}
         onToggleShuffle={playback.toggleShuffle}
-        onToggleRepeat={playback.toggleRepeat}
+        onToggleRepeat={() => console.log("Toggle repeat")}
         onSeek={(position) => {
           // TODO: Implémenter la fonction seek dans usePlayback
           console.log('Seek to position:', position);
@@ -272,7 +272,7 @@ export default function App() {
           onNext={playback.skipToNext}
           onPrevious={playback.skipToPrevious}
           onToggleShuffle={playback.toggleShuffle}
-          onToggleRepeat={playback.toggleRepeat}
+          onToggleRepeat={() => console.log("Toggle repeat")}
           onTrackPress={(trackUri) => handleTrackPress(trackUri)}
           onLoadMore={playlistDetail.loadMoreTracks}
         />
@@ -304,7 +304,7 @@ export default function App() {
   }
 
   // Page d'accueil avec le nouveau design
-  const displayCurrentTrack = playback.getDisplayCurrentTrack();
+  const displayCurrentTrack = playback.currentTrack;
   
   return (
     <MainLayout
@@ -316,7 +316,7 @@ export default function App() {
       onNext={playback.skipToNext}
       onPrevious={playback.skipToPrevious}
       onToggleShuffle={playback.toggleShuffle}
-      onToggleRepeat={playback.toggleRepeat}
+      onToggleRepeat={() => console.log('Toggle repeat')}
       onSeek={(position) => {
         // TODO: Implémenter la fonction seek dans usePlayback
         console.log('Seek to position:', position);

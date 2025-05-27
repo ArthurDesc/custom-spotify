@@ -2,6 +2,34 @@ import { authService } from './authService';
 import { playerService } from './playerService';
 
 class DeviceService {
+  // Cache du dernier appareil actif connu
+  private lastActiveDevice: { id: string; name: string; type: string } | null = null;
+  // Cache de l'appareil Computer de fallback
+  private fallbackComputerDevice: { id: string; name: string } | null = null;
+
+  // Déterminer si un appareil est problématique pour les commandes
+  private isProblematicDevice(deviceType: string, deviceName: string): boolean {
+    // Les iPhones et appareils mobiles peuvent avoir des problèmes de synchronisation
+    const problematicTypes = ['Smartphone', 'Tablet'];
+    const problematicNames = ['iPhone', 'iPad', 'Android'];
+    
+    return problematicTypes.includes(deviceType) || 
+           problematicNames.some(name => deviceName.toLowerCase().includes(name.toLowerCase()));
+  }
+
+  // Obtenir le délai d'attente adaptatif selon le type d'appareil
+  private getDeviceWaitTime(deviceType: string): number {
+    switch (deviceType.toLowerCase()) {
+      case 'smartphone':
+      case 'tablet':
+        return 2000; // 2 secondes pour mobiles
+      case 'computer':
+        return 1000; // 1 seconde pour ordinateurs
+      default:
+        return 1500; // 1.5 secondes par défaut
+    }
+  }
+
   // Obtenir les appareils disponibles avec retry logic
   async getAvailableDevices(retries: number = 3): Promise<any> {
     const accessToken = authService.getAccessToken();
@@ -28,8 +56,10 @@ class DeviceService {
           console.log(`✅ [DeviceService] Appareils récupérés (tentative ${attempt}):`, data.devices.length);
           console.log(`📱 [DeviceService] Données complètes appareils:`, JSON.stringify(data.devices, null, 2));
           
-          // Analyser chaque appareil
+          // Analyser chaque appareil et mettre à jour les caches
           data.devices.forEach((device: any, index: number) => {
+            const isProblematic = this.isProblematicDevice(device.type, device.name);
+            
             console.log(`📱 [DeviceService] Appareil ${index + 1}:`, {
               id: device.id,
               name: device.name,
@@ -37,8 +67,25 @@ class DeviceService {
               is_active: device.is_active,
               is_private_session: device.is_private_session,
               is_restricted: device.is_restricted,
-              volume_percent: device.volume_percent
+              volume_percent: device.volume_percent,
+              problematic: isProblematic
             });
+
+            // Mettre à jour le cache du dernier appareil actif
+            if (device.is_active) {
+              this.lastActiveDevice = { 
+                id: device.id, 
+                name: device.name, 
+                type: device.type 
+              };
+              console.log(`💾 [DeviceService] Cache mis à jour - dernier appareil actif: ${device.name} (${device.type}${isProblematic ? ' - PROBLÉMATIQUE' : ''})`);
+            }
+
+            // Cache de l'appareil Computer de fallback
+            if (device.type === 'Computer' && !device.is_restricted) {
+              this.fallbackComputerDevice = { id: device.id, name: device.name };
+              console.log(`💾 [DeviceService] Computer de fallback: ${device.name}`);
+            }
           });
           
           return data;
@@ -88,6 +135,141 @@ class DeviceService {
     }
 
     throw new Error('Failed to fetch devices after retries');
+  }
+
+  // Obtenir le dernier appareil actif connu depuis le cache
+  getLastActiveDevice(): { id: string; name: string; type: string } | null {
+    return this.lastActiveDevice;
+  }
+
+  // Obtenir l'appareil Computer de fallback
+  getFallbackComputerDevice(): { id: string; name: string } | null {
+    return this.fallbackComputerDevice;
+  }
+
+  // Réactiver automatiquement avec stratégie intelligente
+  async reactivateLastDevice(): Promise<boolean> {
+    if (!this.lastActiveDevice) {
+      console.log(`⚠️ [DeviceService] Aucun appareil en cache pour réactivation`);
+      return false;
+    }
+
+    try {
+      const isProblematic = this.isProblematicDevice(this.lastActiveDevice.type, this.lastActiveDevice.name);
+      console.log(`🔄 [DeviceService] Réactivation intelligente: ${this.lastActiveDevice.name} (${this.lastActiveDevice.type}${isProblematic ? ' - PROBLÉMATIQUE' : ''})`);
+      
+      // Vérifier d'abord si l'appareil est toujours disponible
+      const devicesResponse = await this.getAvailableDevices();
+      const cachedDevice = devicesResponse.devices.find((d: any) => d.id === this.lastActiveDevice!.id);
+      
+      if (!cachedDevice) {
+        console.log(`❌ [DeviceService] Appareil en cache ${this.lastActiveDevice.name} non trouvé dans la liste`);
+        
+        // Essayer le fallback computer si disponible
+        if (this.fallbackComputerDevice) {
+          console.log(`🔄 [DeviceService] Basculement vers Computer de fallback: ${this.fallbackComputerDevice.name}`);
+          return await this.activateComputerFallback();
+        }
+        
+        this.lastActiveDevice = null;
+        return false;
+      }
+
+      // Pour les appareils problématiques (iPhone, etc.), forcer un transfert même s'ils semblent actifs
+      if (isProblematic) {
+        console.log(`🚨 [DeviceService] Appareil problématique détecté, force transfert même si actif`);
+        
+        // Pour les iPhones, essayer d'abord de transférer vers le Computer puis retour vers iPhone
+        if (this.fallbackComputerDevice && cachedDevice.type === 'Smartphone') {
+          console.log(`🔄 [DeviceService] Stratégie iPhone: Computer → iPhone`);
+          
+          // Étape 1: Transférer vers Computer
+          await this.transferPlayback(this.fallbackComputerDevice.id, false);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Étape 2: Retransférer vers iPhone
+          await this.transferPlayback(this.lastActiveDevice.id, false);
+          const waitTime = this.getDeviceWaitTime(this.lastActiveDevice.type);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          
+        } else {
+          // Force transfert simple
+          await this.transferPlayback(this.lastActiveDevice.id, false);
+          const waitTime = this.getDeviceWaitTime(this.lastActiveDevice.type);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+      } else if (!cachedDevice.is_active) {
+        // Pour les appareils non problématiques, transfert standard si inactif
+        console.log(`🔄 [DeviceService] Appareil non problématique inactif, transfert standard`);
+        await this.transferPlayback(this.lastActiveDevice.id, false);
+        const waitTime = this.getDeviceWaitTime(this.lastActiveDevice.type);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        
+      } else {
+        console.log(`✅ [DeviceService] Appareil ${this.lastActiveDevice.name} déjà actif et non problématique`);
+        return true;
+      }
+
+      // Vérifier que l'activation a fonctionné
+      const updatedDevicesResponse = await this.getAvailableDevices();
+      const updatedDevice = updatedDevicesResponse.devices.find((d: any) => d.id === this.lastActiveDevice!.id);
+      
+      if (updatedDevice && updatedDevice.is_active) {
+        console.log(`✅ [DeviceService] Réactivation intelligente réussie: ${this.lastActiveDevice.name}`);
+        return true;
+      } else {
+        console.log(`❌ [DeviceService] Échec réactivation intelligente: ${this.lastActiveDevice.name}`);
+        
+        // Essayer le fallback computer en dernier recours
+        if (this.fallbackComputerDevice && this.lastActiveDevice.id !== this.fallbackComputerDevice.id) {
+          console.log(`🆘 [DeviceService] Dernier recours: activation Computer de fallback`);
+          return await this.activateComputerFallback();
+        }
+        
+        return false;
+      }
+      
+    } catch (error) {
+      console.log(`❌ [DeviceService] Erreur réactivation intelligente:`, error);
+      
+      // Essayer le fallback computer en cas d'erreur
+      if (this.fallbackComputerDevice) {
+        console.log(`🆘 [DeviceService] Erreur détectée, essai Computer de fallback`);
+        return await this.activateComputerFallback();
+      }
+      
+      return false;
+    }
+  }
+
+  // Activer l'appareil Computer de fallback
+  private async activateComputerFallback(): Promise<boolean> {
+    if (!this.fallbackComputerDevice) {
+      console.log(`❌ [DeviceService] Aucun Computer de fallback disponible`);
+      return false;
+    }
+
+    try {
+      console.log(`🖥️ [DeviceService] Activation Computer de fallback: ${this.fallbackComputerDevice.name}`);
+      
+      await this.transferPlayback(this.fallbackComputerDevice.id, false);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Délai Computer plus court
+      
+      // Mettre à jour le cache
+      this.lastActiveDevice = { 
+        id: this.fallbackComputerDevice.id, 
+        name: this.fallbackComputerDevice.name, 
+        type: 'Computer' 
+      };
+      
+      console.log(`✅ [DeviceService] Computer de fallback activé avec succès`);
+      return true;
+      
+    } catch (error) {
+      console.log(`❌ [DeviceService] Échec activation Computer de fallback:`, error);
+      return false;
+    }
   }
 
   // Validation préalable d'un appareil avant transfert
@@ -368,15 +550,16 @@ class DeviceService {
   }
 
   // Méthode améliorée pour jouer des pistes avec gestion automatique des appareils
-  async playTracksWithDeviceCheck(uris: string[], offset?: { position: number }): Promise<void> {
+  async playTracksWithDeviceCheck(uris: string[], offset?: { position: number }, contextUri?: string): Promise<void> {
     console.log(`🎵 [DeviceService] playTracksWithDeviceCheck pour ${uris.length} pistes`);
     console.log(`🎵 [DeviceService] URIs:`, uris);
     console.log(`🎵 [DeviceService] Offset:`, offset);
+    console.log(`🎵 [DeviceService] Context URI:`, contextUri);
     
     try {
       // Essayer de jouer directement d'abord
       console.log('🎵 [DeviceService] Tentative de lecture directe...');
-      await playerService.playTracks(uris, offset);
+      await playerService.playTracks(uris, offset, contextUri);
       console.log('✅ [DeviceService] Lecture directe réussie');
     } catch (error) {
       console.log('🔍 [DeviceService] Échec de lecture directe, vérification des appareils...');
@@ -389,7 +572,7 @@ class DeviceService {
       
       // Réessayer de jouer
       console.log('🎵 [DeviceService] Retry lecture après initialisation appareil...');
-      await playerService.playTracks(uris, offset);
+      await playerService.playTracks(uris, offset, contextUri);
       console.log('✅ [DeviceService] Lecture réussie après initialisation');
     }
   }

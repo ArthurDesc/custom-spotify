@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../utils/colors';
 import { Track, PlaybackState } from '../types/spotify';
+import { playerService } from '../services/playerService';
 
 interface MusicPlayerCardProps {
   currentTrack?: Track | null;
@@ -34,6 +35,23 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
 }) => {
   const isPlaying = playbackState?.is_playing || false;
   const isShuffled = playbackState?.shuffle_state || false;
+
+  // Fonction pour forcer l'utilisation du Computer
+  const handleForceComputer = async () => {
+    try {
+      console.log('🖥️ [MusicPlayerCard] Force Computer demandé par utilisateur');
+      const success = await playerService.forceUseComputerDevice();
+      if (success) {
+        console.log('✅ [MusicPlayerCard] Basculement vers Computer réussi');
+        // Attendre un peu pour que l'appareil soit prêt
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        console.log('❌ [MusicPlayerCard] Échec basculement vers Computer');
+      }
+    } catch (error) {
+      console.error('❌ [MusicPlayerCard] Erreur force Computer:', error);
+    }
+  };
 
   // Version simplifiée pour le layout principal
   if (isInLayout) {
@@ -187,30 +205,37 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
                   />
                 </TouchableOpacity>
 
-                {/* Bouton Frame (icône personnalisée) */}
+                {/* Bouton Computer (Debug/Fallback) */}
                 <TouchableOpacity 
-                  onPress={(e) => e.stopPropagation()}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleForceComputer();
+                  }}
                   className="p-1.5"
                 >
-                  <View 
-                    className="w-4 h-4 border-2 rounded border-primary-purple"
-                    style={{ borderColor: colors.primary.purple }}
-                  >
-                    <Text 
-                      className="text-xs text-center"
-                      style={{ 
-                        color: colors.primary.purple,
-                        fontSize: 6,
-                        lineHeight: 12
-                      }}
-                    >
-                      Frame
-                    </Text>
-                  </View>
+                  <Ionicons 
+                    name="desktop" 
+                    size={16} 
+                    color={colors.primary.purple} 
+                  />
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
           </LinearGradient>
+        )}
+
+        {/* Message d'aide temporaire */}
+        {currentTrack && (
+          <Text 
+            style={{ 
+              color: colors.text.secondary, 
+              fontSize: 10, 
+              textAlign: 'center', 
+              marginTop: 4 
+            }}
+          >
+            💡 Problème avec iPhone ? Cliquez sur l'icône 🖥️ pour basculer vers l'ordinateur
+          </Text>
         )}
       </View>
     );
@@ -402,26 +427,19 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
                 />
               </TouchableOpacity>
 
-              {/* Bouton Frame (icône personnalisée) */}
+              {/* Bouton Computer (Debug/Fallback) */}
               <TouchableOpacity 
-                onPress={(e) => e.stopPropagation()}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleForceComputer();
+                }}
                 className="p-1.5"
               >
-                <View 
-                  className="w-4 h-4 border-2 rounded border-primary-purple"
-                  style={{ borderColor: colors.primary.purple }}
-                >
-                  <Text 
-                    className="text-xs text-center"
-                    style={{ 
-                      color: colors.primary.purple,
-                      fontSize: 6,
-                      lineHeight: 12
-                    }}
-                  >
-                    Frame
-                  </Text>
-                </View>
+                <Ionicons 
+                  name="desktop" 
+                  size={16} 
+                  color={colors.primary.purple} 
+                />
               </TouchableOpacity>
             </View>
           </TouchableOpacity>

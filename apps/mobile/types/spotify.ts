@@ -54,6 +54,7 @@ export interface Playlist {
   };
   public: boolean;
   snapshot_id: string;
+  uri: string;
 }
 
 export interface PlaylistsInfo {

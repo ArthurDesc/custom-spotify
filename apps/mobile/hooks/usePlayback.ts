@@ -9,6 +9,7 @@ export const usePlayback = () => {
   const [optimisticCurrentTrack, setOptimisticCurrentTrack] = useState<Track | null>(null);
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
   const [playbackState, setPlaybackState] = useState<PlaybackState | null>(null);
+  const [iPhoneErrorCount, setIPhoneErrorCount] = useState<number>(0);
 
   const fetchPlaybackState = async () => {
     try {
@@ -16,215 +17,248 @@ export const usePlayback = () => {
       if (data) {
         setPlaybackState(data);
         setCurrentTrack(data.item);
-        // Synchroniser l'optimistic update avec la vraie donnée
-        setOptimisticCurrentTrack(null);
+      } else {
+        setPlaybackState(null);
+        setCurrentTrack(null);
       }
     } catch (error) {
-      console.error('Erreur fetch playback:', error);
+      console.error('❌ [usePlayback] Erreur fetchPlaybackState:', error);
+      setPlaybackState(null);
+      setCurrentTrack(null);
     }
   };
 
-  const playTrack = async (trackUri: string, allTracks: Track[]) => {
-    try {
-      // Trouver l'index du titre sélectionné
-      const selectedIndex = allTracks.findIndex(track => track.uri === trackUri);
+  // Détection et gestion intelligente des erreurs iPhone
+  const handleiPhoneError = async (error: any, operation: string) => {
+    const isRestrictionError = error?.message?.includes('Restriction violated') || 
+                             error?.message?.includes('appareil n\'est peut-être plus actif');
+    
+    if (isRestrictionError) {
+      const newCount = iPhoneErrorCount + 1;
+      setIPhoneErrorCount(newCount);
       
-      if (selectedIndex === -1) {
-        Alert.alert('Erreur', 'Titre non trouvé dans la playlist');
+      console.log(`🚨 [usePlayback] Erreur iPhone ${newCount}/3 pour ${operation}`);
+      
+      // Après 3 erreurs, proposer le Computer
+      if (newCount >= 3) {
+        console.log(`🆘 [usePlayback] Seuil atteint, proposition Computer automatique`);
+        
+        Alert.alert(
+          "Problème de synchronisation iPhone",
+          "L'iPhone semble avoir des difficultés. Voulez-vous basculer vers l'ordinateur pour une meilleure stabilité ?",
+          [
+            {
+              text: "Continuer iPhone",
+              style: "cancel",
+              onPress: () => {
+                setIPhoneErrorCount(0); // Reset du compteur
+              }
+            },
+            {
+              text: "Utiliser l'ordinateur",
+              style: "default",
+              onPress: async () => {
+                try {
+                  console.log(`🖥️ [usePlayback] Basculement Computer demandé`);
+                  const success = await playerService.forceUseComputerDevice();
+                  if (success) {
+                    setIPhoneErrorCount(0); // Reset du compteur
+                    console.log(`✅ [usePlayback] Basculement Computer réussi`);
+                    // Refresh de l'état après basculement
+                    setTimeout(() => fetchPlaybackState(), 1000);
+                  } else {
+                    console.log(`❌ [usePlayback] Échec basculement Computer`);
+                  }
+                } catch (computerError) {
+                  console.error(`❌ [usePlayback] Erreur basculement Computer:`, computerError);
+                }
+              }
+            }
+          ]
+        );
         return;
       }
+    }
+    
+    // Erreur normale, pas de gestion spéciale
+    throw error;
+  };
 
+  const playTrack = async (trackUri: string, allTracks: Track[], contextUri?: string) => {
+    console.log(`🎵 [usePlayback] Début playTrack: ${trackUri}`);
+    console.log(`🎵 [usePlayback] Nombre total de tracks: ${allTracks.length}`);
+    console.log(`🎵 [usePlayback] Context URI: ${contextUri || 'Non fourni'}`);
+    
+    try {
+      setLoadingTrackId(trackUri);
+      
+      const selectedIndex = allTracks.findIndex(track => track.uri === trackUri);
+      console.log(`🎵 [usePlayback] Index sélectionné: ${selectedIndex}`);
+      
+      if (selectedIndex === -1) {
+        throw new Error('Track not found in playlist');
+      }
+
+             // Pour l'instant, utiliser la méthode simple disponible
+       console.log(`🎵 [usePlayback] Lecture du track: ${trackUri}`);
+       await spotifyRemoteService.playTrack(trackUri, contextUri);
+
+      // Mise à jour optimiste de l'état
       const selectedTrack = allTracks[selectedIndex];
-      
-      // 🚀 OPTIMISTIC UPDATE : Mettre à jour l'UI immédiatement
       setOptimisticCurrentTrack(selectedTrack);
-      setLoadingTrackId(selectedTrack.id);
+      console.log(`✅ [usePlayback] Lecture lancée avec succès: ${selectedTrack.name}`);
 
-      // 🎵 PRIORITÉ AU REMOTE SDK : Essayer d'abord le Remote SDK
-      if (spotifyRemoteService.isRemoteConnected()) {
-        console.log('🎵 Utilisation du Remote SDK pour la lecture');
-        try {
-          await spotifyRemoteService.playTrack(trackUri);
-          console.log('✅ Lecture lancée via Remote SDK');
-          
-          // Mettre à jour l'état local
-          setTimeout(() => {
-            setLoadingTrackId(null);
-            // Pas besoin de fetchPlaybackState car le Remote SDK gère la lecture
-          }, 500);
-          return;
-        } catch (remoteError) {
-          console.warn('⚠️ Remote SDK échoué, fallback vers API Web:', remoteError);
-        }
-      }
-
-      // 🌐 FALLBACK API WEB : Si Remote SDK non disponible ou échoué
-      console.log('🌐 Utilisation de l\'API Web pour la lecture');
+      // Reset du compteur d'erreurs en cas de succès
+      setIPhoneErrorCount(0);
       
-      // Sauvegarder l'état shuffle actuel
-      const wasShuffleOn = playbackState?.shuffle_state || false;
-      
-      // Si le shuffle est activé, on doit d'abord le désactiver temporairement
-      if (wasShuffleOn) {
-        await playerService.setShuffle(false);
-        // Petit délai pour que Spotify traite la commande
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-
-      // Créer la liste des URIs à partir du titre sélectionné
-      const urisFromSelected = allTracks.slice(selectedIndex).map(track => track.uri);
-      
-      await playerService.playTracks(urisFromSelected, { position: 0 });
-      
-      // Si le shuffle était activé, le réactiver après un délai
-      if (wasShuffleOn) {
-        setTimeout(async () => {
-          await playerService.setShuffle(true);
-        }, 1000);
-      }
-      
-      // Récupérer le nouvel état après un délai
+      // Refresh de l'état après un délai pour synchroniser avec Spotify
       setTimeout(() => {
         fetchPlaybackState();
-        setLoadingTrackId(null);
-      }, 1000);
+      }, 1500);
+      
     } catch (error) {
-      console.error('Erreur play track:', error);
-      // En cas d'erreur, annuler l'optimistic update
-      setOptimisticCurrentTrack(null);
+      console.error('❌ [usePlayback] Erreur playTrack:', error);
+      
+      try {
+        await handleiPhoneError(error, 'playTrack');
+      } catch (finalError) {
+        console.error('❌ [usePlayback] Erreur finale playTrack:', finalError);
+      }
+    } finally {
       setLoadingTrackId(null);
-      Alert.alert('Erreur', 'Problème lors de la lecture. Assurez-vous que Spotify est ouvert et qu\'un appareil est actif.');
     }
   };
 
   const pausePlayback = async () => {
     try {
-      // Priorité au Remote SDK
-      if (spotifyRemoteService.isRemoteConnected()) {
-        await spotifyRemoteService.pausePlayback();
-        return;
+      console.log('⏸️ [usePlayback] Début pause');
+      await spotifyRemoteService.pausePlayback();
+      
+      // Mise à jour optimiste
+      if (playbackState) {
+        setPlaybackState({ ...playbackState, is_playing: false });
       }
       
-      // Fallback API Web
-      await playerService.pausePlayback();
-      setTimeout(() => fetchPlaybackState(), 500);
+      console.log('✅ [usePlayback] Pause réussie');
+      
+      // Reset du compteur d'erreurs en cas de succès
+      setIPhoneErrorCount(0);
+      
+      // Refresh de l'état après un délai
+      setTimeout(() => fetchPlaybackState(), 1000);
     } catch (error) {
-      console.error('Erreur pause:', error);
+      console.error('❌ [usePlayback] Erreur pause:', error);
+      
+      try {
+        await handleiPhoneError(error, 'pause');
+      } catch (finalError) {
+        console.error('❌ [usePlayback] Erreur finale pause:', finalError);
+      }
     }
   };
 
   const resumePlayback = async () => {
     try {
-      // Priorité au Remote SDK
-      if (spotifyRemoteService.isRemoteConnected()) {
-        await spotifyRemoteService.resumePlayback();
-        return;
+      console.log('▶️ [usePlayback] Début reprise');
+      await spotifyRemoteService.resumePlayback();
+      
+      // Mise à jour optimiste
+      if (playbackState) {
+        setPlaybackState({ ...playbackState, is_playing: true });
       }
       
-      // Fallback API Web
-      await playerService.resumePlayback();
-      setTimeout(() => fetchPlaybackState(), 500);
+      console.log('✅ [usePlayback] Reprise réussie');
+      
+      // Reset du compteur d'erreurs en cas de succès
+      setIPhoneErrorCount(0);
+      
+      // Refresh de l'état après un délai
+      setTimeout(() => fetchPlaybackState(), 1000);
     } catch (error) {
-      console.error('Erreur resume:', error);
+      console.error('❌ [usePlayback] Erreur reprise:', error);
+      
+      try {
+        await handleiPhoneError(error, 'resume');
+      } catch (finalError) {
+        console.error('❌ [usePlayback] Erreur finale reprise:', finalError);
+      }
     }
   };
 
   const skipToNext = async () => {
     try {
-      // Priorité au Remote SDK
-      if (spotifyRemoteService.isRemoteConnected()) {
-        await spotifyRemoteService.skipToNext();
-        return;
-      }
+      console.log('⏭️ [usePlayback] Début skip next');
+      await spotifyRemoteService.skipToNext();
       
-      // Fallback API Web
-      await playerService.skipToNext();
-      setTimeout(() => fetchPlaybackState(), 1000);
+      console.log('✅ [usePlayback] Skip next réussi');
+      
+      // Reset du compteur d'erreurs en cas de succès
+      setIPhoneErrorCount(0);
+      
+      // Refresh de l'état après un délai
+      setTimeout(() => fetchPlaybackState(), 1500);
     } catch (error) {
-      console.error('Erreur skip:', error);
+      console.error('❌ [usePlayback] Erreur skip next:', error);
+      
+      try {
+        await handleiPhoneError(error, 'skip next');
+      } catch (finalError) {
+        console.error('❌ [usePlayback] Erreur finale skip next:', finalError);
+      }
     }
   };
 
   const skipToPrevious = async () => {
     try {
-      // Priorité au Remote SDK
-      if (spotifyRemoteService.isRemoteConnected()) {
-        await spotifyRemoteService.skipToPrevious();
-        return;
-      }
+      console.log('⏮️ [usePlayback] Début skip previous');
+      await spotifyRemoteService.skipToPrevious();
       
-      // Fallback API Web
-      await playerService.skipToPrevious();
-      setTimeout(() => fetchPlaybackState(), 1000);
+      console.log('✅ [usePlayback] Skip previous réussi');
+      
+      // Reset du compteur d'erreurs en cas de succès
+      setIPhoneErrorCount(0);
+      
+      // Refresh de l'état après un délai
+      setTimeout(() => fetchPlaybackState(), 1500);
     } catch (error) {
-      console.error('Erreur previous:', error);
+      console.error('❌ [usePlayback] Erreur skip previous:', error);
+      
+      try {
+        await handleiPhoneError(error, 'skip previous');
+      } catch (finalError) {
+        console.error('❌ [usePlayback] Erreur finale skip previous:', finalError);
+      }
     }
   };
 
   const toggleShuffle = async () => {
-    if (!playbackState) return;
-    
     try {
-      const newShuffleState = !playbackState.shuffle_state;
+      const currentShuffle = playbackState?.shuffle_state || false;
+      console.log(`🔀 [usePlayback] Toggle shuffle: ${!currentShuffle}`);
       
-      // Priorité au Remote SDK
-      if (spotifyRemoteService.isRemoteConnected()) {
-        await spotifyRemoteService.setShuffle(newShuffleState);
-        return;
+      await spotifyRemoteService.setShuffle(!currentShuffle);
+      
+      // Mise à jour optimiste
+      if (playbackState) {
+        setPlaybackState({ ...playbackState, shuffle_state: !currentShuffle });
       }
       
-      // Fallback API Web
-      await playerService.setShuffle(newShuffleState);
-      setTimeout(() => fetchPlaybackState(), 500);
+      console.log('✅ [usePlayback] Toggle shuffle réussi');
+      
+      // Reset du compteur d'erreurs en cas de succès
+      setIPhoneErrorCount(0);
+      
+      // Refresh de l'état après un délai
+      setTimeout(() => fetchPlaybackState(), 1000);
     } catch (error) {
-      console.error('Erreur toggle shuffle:', error);
-    }
-  };
-
-  const toggleRepeat = async () => {
-    if (!playbackState) return;
-    
-    try {
-      let newRepeatState: 'off' | 'track' | 'context';
+      console.error('❌ [usePlayback] Erreur toggle shuffle:', error);
       
-      switch (playbackState.repeat_state) {
-        case 'off':
-          newRepeatState = 'context'; // Répéter la playlist
-          break;
-        case 'context':
-          newRepeatState = 'track'; // Répéter le titre
-          break;
-        case 'track':
-          newRepeatState = 'off'; // Arrêter la répétition
-          break;
-        default:
-          newRepeatState = 'off';
+      try {
+        await handleiPhoneError(error, 'toggle shuffle');
+      } catch (finalError) {
+        console.error('❌ [usePlayback] Erreur finale toggle shuffle:', finalError);
       }
-      
-      // Priorité au Remote SDK
-      if (spotifyRemoteService.isRemoteConnected()) {
-        await spotifyRemoteService.setRepeat(newRepeatState);
-        return;
-      }
-      
-      // Fallback API Web
-      await playerService.setRepeat(newRepeatState);
-      setTimeout(() => fetchPlaybackState(), 500);
-    } catch (error) {
-      console.error('Erreur toggle repeat:', error);
     }
-  };
-
-  // Fonction helper pour déterminer le titre actuellement "actif" (optimistic ou réel)
-  const getDisplayCurrentTrack = () => {
-    return optimisticCurrentTrack || currentTrack;
-  };
-
-  const reset = () => {
-    setCurrentTrack(null);
-    setOptimisticCurrentTrack(null);
-    setLoadingTrackId(null);
-    setPlaybackState(null);
   };
 
   // Nouvelle fonction pour vérifier le statut du Remote SDK
@@ -233,20 +267,17 @@ export const usePlayback = () => {
   };
 
   return {
-    currentTrack,
-    optimisticCurrentTrack,
-    loadingTrackId,
+    currentTrack: optimisticCurrentTrack || currentTrack,
     playbackState,
-    fetchPlaybackState,
+    loadingTrackId,
     playTrack,
     pausePlayback,
     resumePlayback,
     skipToNext,
     skipToPrevious,
     toggleShuffle,
-    toggleRepeat,
-    getDisplayCurrentTrack,
+    fetchPlaybackState,
     getPlaybackMethod,
-    reset
+    iPhoneErrorCount, // Exposer le compteur pour debug
   };
 }; 
