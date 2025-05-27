@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,6 +29,7 @@ export const BottomPlayerControls: React.FC<BottomPlayerControlsProps> = ({
   onAddToPlaylist,
   onSelectDevice,
 }) => {
+  const deviceButtonScale = useRef(new Animated.Value(1)).current;
   const formatTime = (ms: number) => {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
@@ -132,13 +134,39 @@ export const BottomPlayerControls: React.FC<BottomPlayerControlsProps> = ({
           />
         </TouchableOpacity>
 
+
+
         {/* Select Device */}
-        <TouchableOpacity onPress={onSelectDevice}>
-          <Ionicons
-            name="phone-portrait-outline"
-            size={24}
-            color={colors.text.primary}
-          />
+        <TouchableOpacity 
+          onPress={() => {
+            console.log('🎯 [BottomPlayerControls] Clic sur bouton sélection appareil');
+            
+            // Animation de clic
+            Animated.sequence([
+              Animated.spring(deviceButtonScale, {
+                toValue: 0.85,
+                tension: 150,
+                friction: 4,
+                useNativeDriver: true,
+              }),
+              Animated.spring(deviceButtonScale, {
+                toValue: 1,
+                tension: 100,
+                friction: 3,
+                useNativeDriver: true,
+              }),
+            ]).start();
+            
+            onSelectDevice?.();
+          }}
+        >
+          <Animated.View style={{ transform: [{ scale: deviceButtonScale }] }}>
+            <Ionicons
+              name="phone-portrait-outline"
+              size={24}
+              color={colors.text.primary}
+            />
+          </Animated.View>
         </TouchableOpacity>
       </View>
     </LinearGradient>

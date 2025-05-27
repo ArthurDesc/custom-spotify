@@ -123,23 +123,7 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
                   >
                     {currentTrack.artists.map(artist => artist.name).join(', ')}
                   </Text>
-                  {playbackMethod && (
-                    <View style={{ 
-                      marginLeft: 6, 
-                      paddingHorizontal: 4, 
-                      paddingVertical: 1, 
-                      backgroundColor: playbackMethod === 'Remote SDK' ? 'rgba(139, 69, 255, 0.2)' : 'rgba(75, 85, 99, 0.3)',
-                      borderRadius: 4 
-                    }}>
-                      <Text style={{ 
-                        fontSize: 8, 
-                        color: playbackMethod === 'Remote SDK' ? colors.primary.purple : colors.text.secondary,
-                        fontWeight: '600'
-                      }}>
-                        {playbackMethod === 'Remote SDK' ? '🎵 Remote' : '🌐 Web'}
-                      </Text>
-                    </View>
-                  )}
+
                 </View>
               </View>
 
@@ -205,20 +189,6 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
                   />
                 </TouchableOpacity>
 
-                {/* Bouton Computer (Debug/Fallback) */}
-                <TouchableOpacity 
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleForceComputer();
-                  }}
-                  className="p-1.5"
-                >
-                  <Ionicons 
-                    name="desktop" 
-                    size={16} 
-                    color={colors.primary.purple} 
-                  />
-                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           </LinearGradient>

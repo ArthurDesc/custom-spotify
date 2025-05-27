@@ -11,6 +11,7 @@ export { HomeContent } from './HomeContent';
 // Nouveaux composants de détail musical
 export { MusicDetailModal } from './MusicDetailModal';
 export { MusicPlayerWithModal } from './MusicPlayerWithModal';
+export { DeviceSelectionModal } from './DeviceSelectionModal';
 
 // Exemples d'utilisation (pour référence)
 export { ExampleUsage, IntegrateInExistingComponent } from './ExampleUsage'; 

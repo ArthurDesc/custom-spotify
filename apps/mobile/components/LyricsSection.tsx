@@ -5,8 +5,11 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import { generateGeniusUrl } from '../utils/geniusUtils';
 
 interface LyricsSectionProps {
   trackName: string;
@@ -24,58 +27,44 @@ export const LyricsSection: React.FC<LyricsSectionProps> = ({
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [geniusUrl, setGeniusUrl] = useState<string | null>(null);
 
-  // Simulation de récupération des paroles
-  // Dans un vrai projet, vous intégreriez l'API Genius ou une autre API de paroles
+  // Génération de l'URL Genius et gestion des paroles
   useEffect(() => {
-    if (visible && !lyrics) {
-      setLoading(true);
-      setError(null);
+    if (visible && trackName && artistName) {
+      // Générer l'URL Genius
+      const url = generateGeniusUrl(artistName, trackName);
+      setGeniusUrl(url);
       
-      // Simulation d'un appel API
-      setTimeout(() => {
-        setLoading(false);
-        // Paroles factices pour la démonstration
-        setLyrics(`[Paroles de "${trackName}" par ${artistName}]
-
-Verse 1:
-Lorem ipsum dolor sit amet
-Consectetur adipiscing elit
-Sed do eiusmod tempor incididunt
-Ut labore et dolore magna aliqua
-
-Chorus:
-Ut enim ad minim veniam
-Quis nostrud exercitation
-Ullamco laboris nisi ut aliquip
-Ex ea commodo consequat
-
-Verse 2:
-Duis aute irure dolor in reprehenderit
-In voluptate velit esse cillum
-Dolore eu fugiat nulla pariatur
-Excepteur sint occaecat cupidatat
-
-Chorus:
-Ut enim ad minim veniam
-Quis nostrud exercitation
-Ullamco laboris nisi ut aliquip
-Ex ea commodo consequat
-
-Bridge:
-Sed ut perspiciatis unde omnis
-Iste natus error sit voluptatem
-Accusantium doloremque laudantium
-Totam rem aperiam
-
-Outro:
-At vero eos et accusamus
-Et iusto odio dignissimos
-Ducimus qui blanditiis praesentium
-Voluptatum deleniti atque corrupti`);
-      }, 1500);
+      // Reset des états
+      setLoading(false);
+      setError(null);
+      setLyrics(null);
+      
+      console.log('🎵 [LyricsSection] URL Genius générée:', url);
     }
-  }, [visible, trackName, artistName, lyrics]);
+  }, [visible, trackName, artistName]);
+
+  // Fonction pour ouvrir l'URL Genius
+  const handleOpenGenius = async () => {
+    if (!geniusUrl) return;
+    
+    try {
+      console.log('🌐 [LyricsSection] Ouverture de l\'URL Genius:', geniusUrl);
+      await WebBrowser.openBrowserAsync(geniusUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.POPOVER,
+        controlsColor: '#1DB954',
+        toolbarColor: '#191414',
+      });
+    } catch (error) {
+      console.error('❌ [LyricsSection] Erreur lors de l\'ouverture de Genius:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible d\'ouvrir le lien vers Genius. Veuillez réessayer.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   if (!visible) return null;
 
@@ -142,81 +131,134 @@ Voluptatum deleniti atque corrupti`);
         }}
         showsVerticalScrollIndicator={false}
       >
-        {loading ? (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: 400,
+          }}
+        >
+          {/* Icône Genius */}
           <View
             style={{
-              flex: 1,
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: '#FFFF64',
               justifyContent: 'center',
               alignItems: 'center',
-              minHeight: 200,
+              marginBottom: 24,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              elevation: 8,
             }}
           >
-            <ActivityIndicator size="large" color="#333" />
             <Text
               style={{
-                marginTop: 15,
-                fontSize: 16,
-                color: '#666',
-                textAlign: 'center',
+                fontSize: 32,
+                fontWeight: 'bold',
+                color: '#000',
               }}
             >
-              Récupération des paroles via Genius...
+              🎵
             </Text>
           </View>
-        ) : error ? (
-          <View
+
+          {/* Titre et description */}
+          <Text
             style={{
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              minHeight: 200,
+              fontSize: 20,
+              fontWeight: '600',
+              color: '#333',
+              textAlign: 'center',
+              marginBottom: 8,
             }}
           >
-            <Ionicons name="warning" size={48} color="#999" />
-            <Text
-              style={{
-                marginTop: 15,
-                fontSize: 16,
-                color: '#666',
-                textAlign: 'center',
-              }}
-            >
-              {error}
-            </Text>
-          </View>
-        ) : lyrics ? (
+            Paroles sur Genius
+          </Text>
+          
           <Text
             style={{
               fontSize: 16,
-              lineHeight: 24,
-              color: '#333',
-              textAlign: 'left',
+              color: '#666',
+              textAlign: 'center',
+              marginBottom: 32,
+              lineHeight: 22,
+              paddingHorizontal: 20,
             }}
           >
-            {lyrics}
+            Consultez les paroles complètes, annotations et explications sur Genius.com
           </Text>
-        ) : (
-          <View
-            style={{
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              minHeight: 200,
-            }}
-          >
-            <Ionicons name="musical-notes" size={48} color="#999" />
+
+          {/* URL générée (pour debug) */}
+          {geniusUrl && (
             <Text
               style={{
-                marginTop: 15,
-                fontSize: 16,
-                color: '#666',
+                fontSize: 12,
+                color: '#999',
                 textAlign: 'center',
+                marginBottom: 24,
+                paddingHorizontal: 20,
+                fontFamily: 'monospace',
+              }}
+              numberOfLines={2}
+            >
+              {geniusUrl}
+            </Text>
+          )}
+
+          {/* Bouton pour ouvrir Genius */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#FFFF64',
+              paddingHorizontal: 32,
+              paddingVertical: 16,
+              borderRadius: 25,
+              flexDirection: 'row',
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
+            onPress={handleOpenGenius}
+            disabled={!geniusUrl}
+          >
+            <Ionicons 
+              name="open-outline" 
+              size={20} 
+              color="#000" 
+              style={{ marginRight: 8 }}
+            />
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: '#000',
               }}
             >
-              Aucune parole disponible
+              Ouvrir sur Genius
             </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+
+          {/* Note informative */}
+          <Text
+            style={{
+              fontSize: 14,
+              color: '#888',
+              textAlign: 'center',
+              marginTop: 24,
+              paddingHorizontal: 30,
+              lineHeight: 20,
+            }}
+          >
+            La page s'ouvrira dans votre navigateur. Si la chanson n'est pas trouvée, vous pouvez chercher manuellement sur Genius.
+          </Text>
+        </View>
       </ScrollView>
 
 

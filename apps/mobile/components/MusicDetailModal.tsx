@@ -9,6 +9,7 @@ import {
   StatusBar,
   Platform,
   PanResponder,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,8 +18,10 @@ import { colors } from '../utils/colors';
 import { TouchControlArea } from './TouchControlArea';
 import { MainPlayerArea } from './MainPlayerArea';
 import { BottomPlayerControls } from './BottomPlayerControls';
-import { LyricsSection } from './LyricsSection';
 import { AnimatedBackground } from './AnimatedBackground';
+import { DeviceSelectionModal } from './DeviceSelectionModal';
+import * as WebBrowser from 'expo-web-browser';
+import { generateGeniusUrl } from '../utils/geniusUtils';
 
 interface MusicDetailModalProps {
   visible: boolean;
@@ -51,7 +54,7 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
 }) => {
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const [progressValue, setProgressValue] = useState(0);
-  const [showLyrics, setShowLyrics] = useState(false);
+  const [showDeviceSelection, setShowDeviceSelection] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -78,7 +81,34 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
     }
   }, [playbackState, currentTrack]);
 
-  // Gestionnaire pour scroll vers le bas (affichage des lyrics)
+  // Fonction pour ouvrir Genius directement
+  const handleOpenGenius = async () => {
+    if (!currentTrack) return;
+    
+    try {
+      const artistName = currentTrack.artists.map(artist => artist.name).join(', ');
+      const geniusUrl = generateGeniusUrl(artistName, currentTrack.name);
+      
+      console.log('🌐 [MusicDetailModal] Ouverture de Genius:', geniusUrl);
+      console.log('🎵 [MusicDetailModal] Artiste:', artistName, '- Titre:', currentTrack.name);
+      
+      await WebBrowser.openBrowserAsync(geniusUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.POPOVER,
+        controlsColor: '#1DB954',
+        toolbarColor: '#191414',
+        dismissButtonStyle: 'close',
+      });
+    } catch (error) {
+      console.error('❌ [MusicDetailModal] Erreur lors de l\'ouverture de Genius:', error);
+      Alert.alert(
+        'Erreur',
+        'Impossible d\'ouvrir les paroles sur Genius. Veuillez réessayer.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  // Gestionnaire pour scroll vers le bas (ouverture directe de Genius)
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (evt, gestureState) => {
       return Math.abs(gestureState.dy) > 20 && Math.abs(gestureState.dx) < 50;
@@ -90,7 +120,8 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
     },
     onPanResponderRelease: (evt, gestureState) => {
       if (gestureState.dy > 100) {
-        setShowLyrics(true);
+        // Ouvrir directement Genius au lieu d'afficher la section lyrics
+        handleOpenGenius();
       }
       Animated.spring(scrollY, {
         toValue: 0,
@@ -238,18 +269,25 @@ export const MusicDetailModal: React.FC<MusicDetailModalProps> = ({
           onToggleShuffle={onToggleShuffle}
           onToggleRepeat={onToggleRepeat}
           onAddToPlaylist={() => {}}
-          onSelectDevice={() => {}}
+          onSelectDevice={() => {
+            console.log('🎯 [MusicDetailModal] Ouverture sélection appareils');
+            setShowDeviceSelection(true);
+          }}
+          onOpenGenius={handleOpenGenius}
         />
 
        
       </Animated.View>
 
-      {/* Section des paroles */}
-      <LyricsSection
-        trackName={currentTrack.name}
-        artistName={currentTrack.artists.map(artist => artist.name).join(', ')}
-        visible={showLyrics}
-        onClose={() => setShowLyrics(false)}
+
+
+      {/* Modal de sélection d'appareils */}
+      <DeviceSelectionModal
+        visible={showDeviceSelection}
+        onClose={() => {
+          console.log('🎯 [MusicDetailModal] Fermeture sélection appareils');
+          setShowDeviceSelection(false);
+        }}
       />
     </Modal>
   );
