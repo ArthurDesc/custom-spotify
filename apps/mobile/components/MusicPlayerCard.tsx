@@ -223,20 +223,6 @@ export const MusicPlayerCard: React.FC<MusicPlayerCardProps> = ({
             </TouchableOpacity>
           </LinearGradient>
         )}
-
-        {/* Message d'aide temporaire */}
-        {currentTrack && (
-          <Text 
-            style={{ 
-              color: colors.text.secondary, 
-              fontSize: 10, 
-              textAlign: 'center', 
-              marginTop: 4 
-            }}
-          >
-            💡 Problème avec iPhone ? Cliquez sur l'icône 🖥️ pour basculer vers l'ordinateur
-          </Text>
-        )}
       </View>
     );
   }
